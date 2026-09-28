@@ -215,12 +215,12 @@ const formatters: readonly TFormatter[] = [
   formatOutputFile,
 ];
 
-const format = ({ options }: { options: TCcOptions }): string[] => {
+const formatCommandLine = ({ options }: { options: TCcOptions }): string[] => {
   return formatters.flatMap((formatter) => {
     return formatter({ options });
   });
 };
 
 export {
-  format
+  formatCommandLine
 };

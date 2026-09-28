@@ -1,9 +1,9 @@
-import { parse } from "./parse.ts";
-import { format } from "./format.ts";
+import { parseCommandLine } from "./parse-command-line.ts";
+import { formatCommandLine } from "./format-command-line.ts";
 
 export {
-  parse,
-  format
+  parseCommandLine,
+  formatCommandLine
 };
 
 export type {

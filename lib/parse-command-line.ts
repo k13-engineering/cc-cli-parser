@@ -292,7 +292,7 @@ const parseArg = ({ options, arg }: { options: TCcOptions; arg: string }): TPars
   return { options: addInputFile({ options, value: arg }), pendingValueHandler: undefined };
 };
 
-const parse = ({ args }: { args: readonly string[] }): TCcOptions => {
+const parseCommandLine = ({ args }: { args: readonly string[] }): TCcOptions => {
   const initialState: TParseState = {
     options: { action: "link" },
     pendingValueHandler: undefined
@@ -313,5 +313,5 @@ const parse = ({ args }: { args: readonly string[] }): TCcOptions => {
 };
 
 export {
-  parse
+  parseCommandLine
 };
