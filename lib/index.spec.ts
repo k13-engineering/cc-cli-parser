@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "mocha";
-import { formatCommandLine, parseCommandLine } from "./index.ts";
+import { createCompilerCommandLineParser } from "./index.ts";
 
-describe("parseCommandLine and formatCommandLine", () => {
+describe("createCompilerCommandLineParser", () => {
+  const parser = createCompilerCommandLineParser();
+
   [
     "-c test.c -o test.o",
     "-c -I. -I../../lib -I../../lib  -g -O2 -Qunused-arguments -pthread  -DHAVE_CONFIG_H  test_icount_cmds.c -o test_icount_cmds.o",
@@ -12,9 +14,9 @@ describe("parseCommandLine and formatCommandLine", () => {
     it(`should parse "${argsAsString}" correctly`, () => {
       const args = argsAsString.split(/\s+/);
 
-      const options = parseCommandLine({ args });
-      const argsReformatted = formatCommandLine({ options });
-      const optionsReparsed = parseCommandLine({ args: argsReformatted });
+      const options = parser.parseCommandLine({ args });
+      const argsReformatted = parser.formatCommandLine({ options });
+      const optionsReparsed = parser.parseCommandLine({ args: argsReformatted });
 
       assert.deepEqual(options, optionsReparsed);
     });
@@ -31,8 +33,8 @@ describe("parseCommandLine and formatCommandLine", () => {
     it(`should parse "${argsAsString}" correctly`, () => {
       const args = argsAsString.split(/\s+/);
 
-      const options = parseCommandLine({ args });
-      const argsReformatted = formatCommandLine({ options });
+      const options = parser.parseCommandLine({ args });
+      const argsReformatted = parser.formatCommandLine({ options });
 
       assert.deepEqual(args, argsReformatted);
     });
