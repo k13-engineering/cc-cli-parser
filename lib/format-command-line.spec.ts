@@ -1,212 +1,247 @@
 import assert from "node:assert/strict";
 import { describe, it } from "mocha";
 import { formatCommandLine } from "./format-command-line.ts";
+import { groupDescriptors } from "./option-descriptors.ts";
+import { defaultOptions } from "./options.ts";
+import { parseCommandLine } from "./parse-command-line.ts";
 import {
-  defaultDebugOptions,
-  defaultDependencyInfoOptions,
-  defaultOptimizationOptions,
-  defaultOptions
-} from "./options.ts";
+  argsFor,
+  splitLine,
+  withGroup
+} from "./test-helpers.spec.ts";
 import type { TCcOptions } from "./options.ts";
 
+// parsing the formatted options again gives the same options
+const assertRoundTrip = ({ args }: { args: readonly string[] }) => {
+  const options = parseCommandLine({ args });
+
+  assert.deepEqual(parseCommandLine({ args: formatCommandLine({ options }) }), options, args.join(" "));
+};
+
+const formatLine = ({ line }: { line: string }) => {
+  return formatCommandLine({ options: parseCommandLine({ args: splitLine({ line }) }) });
+};
+
 describe("formatCommandLine", () => {
-  describe("action", () => {
-    it("should format nothing for link", () => {
-      assert.deepEqual(formatCommandLine({ options: defaultOptions }), []);
+  it("should format an empty command line", () => {
+    assert.deepEqual(formatCommandLine({ options: defaultOptions }), []);
+  });
+
+  describe("described options", () => {
+    groupDescriptors.forEach((descriptor) => {
+      it(`should format the options of ${descriptor.group}`, () => {
+        const { prefix } = descriptor.toggles;
+
+        [
+          ...Object.values(descriptor.flags),
+          ...Object.values(descriptor.toggles.names).flatMap((name) => {
+            return [`${prefix}${name}`, `${prefix}no-${name}`];
+          }),
+          ...descriptor.choices.flatMap(({ choices }) => {
+            return choices.map(({ option }) => {
+              return option;
+            });
+          }),
+          ...descriptor.valuedToggles.flatMap((entry) => {
+            const value = entry.values === undefined ? "value" : entry.values[0];
+
+            return [`${entry.prefix}${entry.name}`, `${entry.prefix}no-${entry.name}`, `${entry.prefix}${entry.name}=${value}`];
+          }),
+        ].forEach((option) => {
+          assertRoundTrip({ args: [option] });
+        });
+
+        [
+          ...descriptor.enums.map(({ option, syntax, values }) => {
+            return argsFor({ option, syntax, value: values[0] });
+          }),
+          ...[...descriptor.strings, ...descriptor.lists].map(({ option, syntax }) => {
+            return argsFor({ option, syntax, value: "value" });
+          }),
+          ...descriptor.numbers.map(({ option, syntax }) => {
+            return argsFor({ option, syntax, value: "7" });
+          }),
+        ].forEach((args) => {
+          assertRoundTrip({ args });
+        });
+      });
     });
 
-    it("should format -c for compile", () => {
-      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, action: "compile" } }), ["-c"]);
+    it("should write values in their first spelling", () => {
+      assert.deepEqual(formatLine({ line: "-target x86_64-linux-gnu --sysroot /sysroot -isysroot/sdk -I include -Tlink.ld" }), [
+        "--target=x86_64-linux-gnu",
+        "--sysroot=/sysroot",
+        "-isysroot",
+        "/sdk",
+        "-Iinclude",
+        "-Tlink.ld",
+      ]);
     });
 
-    it("should format -E for preprocess", () => {
-      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, action: "preprocess" } }), ["-E"]);
+    it("should write the first option of a choice", () => {
+      assert.deepEqual(formatLine({ line: "-fno-PIC -fno-signed-char" }), ["-funsigned-char", "-fno-pic"]);
+    });
+
+    it("should reject a value no choice stands for", () => {
+      const options = withGroup({ group: "machine", values: { wordSize: "128" as "64" } });
+
+      assert.throws(() => {
+        formatCommandLine({ options });
+      }, { message: "unsupported value 128 for wordSize" });
     });
   });
 
-  it("should format the target", () => {
-    assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, target: "wasm32" } }), ["--target=wasm32"]);
-  });
-
-  it("should format only enabled boolean flags", () => {
-    const options: TCcOptions = {
-      ...defaultOptions,
-      static: true,
-      rdynamic: false,
-      nolibc: true,
-      nostdinc: true,
-      nostartfiles: true,
-      nodefaultlibs: true,
-      pthread: true
-    };
-
-    assert.deepEqual(formatCommandLine({ options }), [
-      "-pthread",
-      "-nodefaultlibs",
-      "-nostartfiles",
-      "-nostdinc",
-      "-nolibc",
-      "-static"
-    ]);
-  });
-
-  it("should format all optimization options", () => {
-    const options: TCcOptions = {
-      ...defaultOptions,
-      optimization: { ...defaultOptimizationOptions, enable: true, level: 2, size: true }
-    };
-
-    assert.deepEqual(formatCommandLine({ options }), [
-      "-O",
-      "-O2",
-      "-Os"
-    ]);
-  });
-
-  it("should format all debug options", () => {
-    const options: TCcOptions = {
-      ...defaultOptions,
-      debug: { ...defaultDebugOptions, enable: true, level: 0 }
-    };
-
-    assert.deepEqual(formatCommandLine({ options }), ["-g", "-g0"]);
-  });
-
-  it("should format no optimization and debug options when none are enabled", () => {
-    const options: TCcOptions = {
-      ...defaultOptions,
-      optimization: defaultOptimizationOptions,
-      debug: defaultDebugOptions
-    };
-
-    assert.deepEqual(formatCommandLine({ options }), []);
-  });
-
-  it("should format defines with and without value", () => {
-    assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, defines: { A: true, B: "1" } } }), ["-DA", "-DB=1"]);
-  });
-
-  it("should format unknown options with and without value", () => {
-    const options: TCcOptions = {
-      ...defaultOptions,
-      unknownOptions: { "-fpic": "", "-fvisibility": "default", "-Wno-unused": "", "-Ofast": "" }
-    };
-
-    assert.deepEqual(formatCommandLine({ options }), ["-fpic", "-fvisibility=default", "-Wno-unused", "-Ofast"]);
-  });
-
-  describe("dependency info", () => {
-    it("should format nothing for empty dependency info", () => {
-      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, dependencyInfo: defaultDependencyInfoOptions } }), []);
+  describe("action, queries and optimization", () => {
+    [
+      { action: "preprocess", option: "-E" },
+      { action: "analyze", option: "--analyze" },
+      { action: "check-syntax", option: "-fsyntax-only" },
+      { action: "generate-assembly", option: "-S" },
+      { action: "compile", option: "-c" },
+    ].forEach(({ action, option }) => {
+      it(`should format ${option}`, () => {
+        assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, action } as TCcOptions }), [option]);
+      });
     });
 
-    it("should format -MD for a dependency file including system headers", () => {
-      const options: TCcOptions = {
-        ...defaultOptions,
-        action: "compile",
-        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: true }
-      };
-
-      assert.deepEqual(formatCommandLine({ options }), ["-c", "-MD"]);
+    it("should format queries", () => {
+      assert.deepEqual(formatLine({ line: "-print-prog-name=ld -dumpversion" }), ["-print-prog-name=ld", "-dumpversion"]);
     });
 
-    it("should format -MMD for a dependency file excluding system headers", () => {
-      const options: TCcOptions = {
-        ...defaultOptions,
-        action: "compile",
-        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: false }
-      };
-
-      assert.deepEqual(formatCommandLine({ options }), ["-c", "-MMD"]);
+    it("should format optimization levels", () => {
+      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, optimization: 3 } }), ["-O3"]);
+      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, optimization: "min-size" } }), ["-Oz"]);
     });
 
-    it("should format -M when preprocessing including system headers", () => {
-      const options: TCcOptions = {
-        ...defaultOptions,
-        action: "preprocess",
-        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: true }
-      };
+    it("should format prefix maps", () => {
+      assert.deepEqual(formatLine({ line: "-ffile-prefix-map=/a=/b -fprofile-prefix-map=/c=" }), [
+        "-ffile-prefix-map=/a=/b",
+        "-fprofile-prefix-map=/c=",
+      ]);
+    });
+  });
 
-      assert.deepEqual(formatCommandLine({ options }), ["-E", "-M"]);
+  describe("inputs", () => {
+    it("should give input files their language", () => {
+      assert.deepEqual(formatLine({ line: "a.c -x c++ b.cc -lfoo c.cc -x none d.c" }), [
+        "a.c",
+        "-x",
+        "c++",
+        "b.cc",
+        "-lfoo",
+        "c.cc",
+        "-x",
+        "none",
+        "d.c",
+      ]);
     });
 
-    it("should format -MM when preprocessing excluding system headers", () => {
-      const options: TCcOptions = {
-        ...defaultOptions,
-        action: "preprocess",
-        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: false }
-      };
+    it("should keep libraries, frameworks, linker arguments and response files in order", () => {
+      const line = "-Wl,--start-group -la -lb -Wl,--end-group main.o -framework Cocoa -weak_framework Metal @objects.rsp";
 
-      assert.deepEqual(formatCommandLine({ options }), ["-E", "-MM"]);
+      assert.deepEqual(formatLine({ line }), splitLine({ line }));
+    });
+
+    it("should pass linker arguments containing a comma with -Xlinker", () => {
+      assert.deepEqual(formatLine({ line: "-Xlinker --defsym=a=b,c -Xlinker -rpath" }), [
+        "-Xlinker",
+        "--defsym=a=b,c",
+        "-Wl,-rpath",
+      ]);
+    });
+
+    it("should format the output file last", () => {
+      assert.deepEqual(formatLine({ line: "-o a.out -c a.c" }), ["-c", "a.c", "-o", "a.out"]);
+    });
+  });
+
+  describe("driver and target", () => {
+    it("should format arguments passed on to other tools", () => {
+      const line = "-Wa,--noexecstack -Xassembler -I,x -Wp,-MD,a.d --param max-inline-insns=10 -Xarch_arm64 -mcpu=apple-m1";
+
+      assert.deepEqual(formatLine({ line }), [
+        "-Xassembler",
+        "--noexecstack",
+        "-Xassembler",
+        "-I,x",
+        "-Wp,-MD,a.d",
+        "--param",
+        "max-inline-insns=10",
+        "-Xarch_arm64",
+        "-mcpu=apple-m1",
+      ]);
+    });
+
+    it("should format apple deployment targets", () => {
+      assert.deepEqual(formatLine({ line: "-mmacosx-version-min=10.13" }), ["-mmacosx-version-min=10.13"]);
+    });
+  });
+
+  describe("debug and instrumentation", () => {
+    it("should format the debug level apart from the format", () => {
+      assert.deepEqual(formatLine({ line: "-ggdb3" }), ["-ggdb", "-g3"]);
+    });
+
+    it("should format sanitizers in order, sharing options between neighbours", () => {
+      const line = "-fno-sanitize=vptr -fsanitize=address -fsanitize=undefined -fno-sanitize-recover -fsanitize-trap=integer";
+
+      assert.deepEqual(formatLine({ line }), [
+        "-fno-sanitize=vptr",
+        "-fsanitize=address,undefined",
+        "-fno-sanitize-recover=all",
+        "-fsanitize-trap=integer",
+      ]);
+    });
+
+    it("should format sanitizer coverage", () => {
+      assert.deepEqual(formatLine({ line: "-fsanitize-coverage=trace-pc -fsanitize-coverage=trace-cmp" }), [
+        "-fsanitize-coverage=trace-pc,trace-cmp",
+      ]);
+    });
+  });
+
+  describe("warnings", () => {
+    it("should format named warnings", () => {
+      const line = "-Wformat=2 -Wno-unused -Werror=switch -Wno-error=shadow -Wall -Werror=all";
+
+      assert.deepEqual(formatLine({ line }), ["-Wall", "-Werror=all", "-Wformat=2", "-Wno-error=shadow", "-Werror=switch", "-Wno-unused"]);
+    });
+
+    it("should format -W and -pedantic in their -W<name> spelling", () => {
+      assert.deepEqual(formatLine({ line: "-W -pedantic" }), ["-Wextra", "-Wpedantic"]);
+    });
+  });
+
+  describe("preprocessor and dependencies", () => {
+    it("should format macros in order", () => {
+      assert.deepEqual(formatLine({ line: "-DA -DB=1 -DC= -UA" }), ["-DA", "-DB=1", "-DC=", "-UA"]);
+    });
+
+    it("should format dependency info", () => {
+      assert.deepEqual(formatLine({ line: "-M" }), ["-E", "-M"]);
+      assert.deepEqual(formatLine({ line: "-MM" }), ["-E", "-MM"]);
+      assert.deepEqual(formatLine({ line: "-MD -MP -MT a.o -MQ b.o -MF a.d" }), ["-MP", "-MD", "-MT", "a.o", "-MQ", "b.o", "-MF", "a.d"]);
+      assert.deepEqual(formatLine({ line: "-MMD" }), ["-MMD"]);
     });
 
     it("should reject dependency info without a file when not preprocessing", () => {
+      const options = withGroup({ group: "dependencies", values: { generate: true } });
+
       assert.throws(() => {
-        formatCommandLine({
-          options: {
-            ...defaultOptions,
-            action: "compile",
-            dependencyInfo: { ...defaultDependencyInfoOptions, generate: true }
-          }
-        });
+        formatCommandLine({ options: { ...options, action: "compile" } });
       }, { message: "non-file dependency info requested but action is not preprocess" });
     });
 
-    it("should format target, filename and missing headers", () => {
-      const options: TCcOptions = {
-        ...defaultOptions,
-        dependencyInfo: { ...defaultDependencyInfoOptions, target: "a.o", file: true, filename: "a.d", includeMissing: true }
-      };
-
-      assert.deepEqual(formatCommandLine({ options }), ["-MT", "a.o", "-MF", "a.d", "-MP"]);
-    });
-
-    it("should reject a filename when file output is not enabled", () => {
+    it("should reject a dependency filename when file output is not enabled", () => {
       assert.throws(() => {
-        formatCommandLine({ options: { ...defaultOptions, dependencyInfo: { ...defaultDependencyInfoOptions, filename: "a.d" } } });
+        formatCommandLine({ options: withGroup({ group: "dependencies", values: { filename: "a.d" } }) });
       }, { message: "filename given but file output not enabled" });
     });
   });
 
-  it("should format all options in a stable order", () => {
-    const options: TCcOptions = {
-      ...defaultOptions,
-      outputFile: "a.o",
-      dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: false },
-      libraries: ["m"],
-      unknownOptions: { "-fpic": "", "-Wall": "" },
-      defines: { A: true },
-      libraryDirectories: ["lib"],
-      includeFiles: ["config.h"],
-      includeDirectories: ["include"],
-      debug: { ...defaultDebugOptions, enable: true },
-      optimization: { ...defaultOptimizationOptions, level: 2 },
-      std: "c99",
-      pthread: true,
-      inputFiles: ["a.c"],
-      target: "wasm32",
-      action: "compile"
-    };
-
-    assert.deepEqual(formatCommandLine({ options }), [
-      "-c",
-      "--target=wasm32",
-      "a.c",
-      "-pthread",
-      "-std=c99",
-      "-O2",
-      "-g",
-      "-Iinclude",
-      "-include",
-      "config.h",
-      "-Llib",
-      "-DA",
-      "-fpic",
-      "-Wall",
-      "-lm",
-      "-MMD",
-      "-o",
-      "a.o"
-    ]);
+  describe("unknown options", () => {
+    it("should format them with their value", () => {
+      assert.deepEqual(formatLine({ line: "-fnew-thing -mfoo=bar=baz -Werror=new" }), ["-fnew-thing", "-mfoo=bar=baz", "-Werror=new"]);
+    });
   });
 });
