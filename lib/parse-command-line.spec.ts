@@ -1,23 +1,29 @@
 import assert from "node:assert/strict";
 import { describe, it } from "mocha";
+import {
+  defaultDebugOptions,
+  defaultDependencyInfoOptions,
+  defaultOptimizationOptions,
+  defaultOptions
+} from "./options.ts";
 import { parseCommandLine } from "./parse-command-line.ts";
 
 describe("parseCommandLine", () => {
   describe("arguments", () => {
     it("should link by default", () => {
-      assert.deepEqual(parseCommandLine({ args: [] }), { action: "link" });
+      assert.deepEqual(parseCommandLine({ args: [] }), defaultOptions);
     });
 
     it("should collect input files", () => {
       assert.deepEqual(parseCommandLine({ args: ["a.c", "b.c"] }), {
-        action: "link",
+        ...defaultOptions,
         inputFiles: ["a.c", "b.c"]
       });
     });
 
     it("should treat arguments named like object properties as input files", () => {
       assert.deepEqual(parseCommandLine({ args: ["toString", "constructor"] }), {
-        action: "link",
+        ...defaultOptions,
         inputFiles: ["toString", "constructor"]
       });
     });
@@ -34,7 +40,7 @@ describe("parseCommandLine", () => {
       const args = ["-pthread", "-nodefaultlibs", "-nostartfiles", "-nostdinc", "-nolibc", "-rdynamic", "-static"];
 
       assert.deepEqual(parseCommandLine({ args }), {
-        action: "link",
+        ...defaultOptions,
         pthread: true,
         nodefaultlibs: true,
         nostartfiles: true,
@@ -46,32 +52,32 @@ describe("parseCommandLine", () => {
     });
 
     it("should ignore -Q options", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-Qunused-arguments"] }), { action: "link" });
+      assert.deepEqual(parseCommandLine({ args: ["-Qunused-arguments"] }), defaultOptions);
     });
   });
 
   describe("files and directories", () => {
     it("should parse the output file", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-o", "a.out"] }), { action: "link", outputFile: "a.out" });
+      assert.deepEqual(parseCommandLine({ args: ["-o", "a.out"] }), { ...defaultOptions, outputFile: "a.out" });
     });
 
     it("should parse include directories without duplicates", () => {
       assert.deepEqual(parseCommandLine({ args: ["-I", "a", "-Ib", "-Ia"] }), {
-        action: "link",
+        ...defaultOptions,
         includeDirectories: ["a", "b"]
       });
     });
 
     it("should parse library directories without duplicates", () => {
       assert.deepEqual(parseCommandLine({ args: ["-L", "a", "-Lb", "-La"] }), {
-        action: "link",
+        ...defaultOptions,
         libraryDirectories: ["a", "b"]
       });
     });
 
     it("should parse include files", () => {
       assert.deepEqual(parseCommandLine({ args: ["-include", "a.h", "-include", "b.h"] }), {
-        action: "link",
+        ...defaultOptions,
         includeFiles: ["a.h", "b.h"]
       });
     });
@@ -79,22 +85,22 @@ describe("parseCommandLine", () => {
 
   describe("action", () => {
     it("should compile with -c", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-c"] }), { action: "compile" });
+      assert.deepEqual(parseCommandLine({ args: ["-c"] }), { ...defaultOptions, action: "compile" });
     });
 
     it("should preprocess with -E", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-E"] }), { action: "preprocess" });
+      assert.deepEqual(parseCommandLine({ args: ["-E"] }), { ...defaultOptions, action: "preprocess" });
     });
 
     it("should use the last action given", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-E", "-c"] }), { action: "compile" });
+      assert.deepEqual(parseCommandLine({ args: ["-E", "-c"] }), { ...defaultOptions, action: "compile" });
     });
   });
 
   describe("defines", () => {
     it("should parse defines with and without value", () => {
       assert.deepEqual(parseCommandLine({ args: ["-D", "A", "-DB=1", "-DC="] }), {
-        action: "link",
+        ...defaultOptions,
         defines: { A: true, B: "1", C: "" }
       });
     });
@@ -109,14 +115,14 @@ describe("parseCommandLine", () => {
   describe("code generation", () => {
     it("should parse enabled, disabled and valued options", () => {
       assert.deepEqual(parseCommandLine({ args: ["-fpic", "-fno-common", "-fvisibility=default"] }), {
-        action: "link",
+        ...defaultOptions,
         codeGeneration: { pic: true, common: false, visibility: "default" }
       });
     });
 
     it("should use the last value given for an option", () => {
       assert.deepEqual(parseCommandLine({ args: ["-fno-pic", "-fpic"] }), {
-        action: "link",
+        ...defaultOptions,
         codeGeneration: { pic: true }
       });
     });
@@ -130,47 +136,62 @@ describe("parseCommandLine", () => {
 
   describe("debug", () => {
     it("should enable debug information with -g", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-g"] }), { action: "link", debug: { enable: true } });
+      assert.deepEqual(parseCommandLine({ args: ["-g"] }), { ...defaultOptions, debug: { ...defaultDebugOptions, enable: true } });
     });
 
     it("should parse a debug level", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-g0"] }), { action: "link", debug: { level: 0 } });
+      assert.deepEqual(parseCommandLine({ args: ["-g0"] }), { ...defaultOptions, debug: { ...defaultDebugOptions, level: 0 } });
     });
 
     it("should parse enabled and disabled debug options", () => {
       assert.deepEqual(parseCommandLine({ args: ["-g", "-gdwarf", "-gno-pubnames"] }), {
-        action: "link",
-        debug: { enable: true, dwarf: true, pubnames: false }
+        ...defaultOptions,
+        debug: { ...defaultDebugOptions, enable: true, dwarf: true, pubnames: false }
       });
     });
   });
 
   describe("optimization", () => {
     it("should enable optimization with -O", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-O"] }), { action: "link", optimization: { enable: true } });
+      assert.deepEqual(parseCommandLine({ args: ["-O"] }), {
+        ...defaultOptions,
+        optimization: { ...defaultOptimizationOptions, enable: true }
+      });
     });
 
     it("should parse an optimization level", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-O2"] }), { action: "link", optimization: { level: 2 } });
+      assert.deepEqual(parseCommandLine({ args: ["-O2"] }), {
+        ...defaultOptions,
+        optimization: { ...defaultOptimizationOptions, level: 2 }
+      });
     });
 
     it("should parse optimization for size", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-Os"] }), { action: "link", optimization: { size: true } });
+      assert.deepEqual(parseCommandLine({ args: ["-Os"] }), {
+        ...defaultOptions,
+        optimization: { ...defaultOptimizationOptions, size: true }
+      });
     });
 
     it("should parse named optimizations", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-Ofast"] }), { action: "link", optimization: { fast: true } });
+      assert.deepEqual(parseCommandLine({ args: ["-Ofast"] }), {
+        ...defaultOptions,
+        optimization: { ...defaultOptimizationOptions, fast: true }
+      });
     });
 
     it("should use the last optimization given", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-O2", "-Os"] }), { action: "link", optimization: { size: true } });
+      assert.deepEqual(parseCommandLine({ args: ["-O2", "-Os"] }), {
+        ...defaultOptions,
+        optimization: { ...defaultOptimizationOptions, size: true }
+      });
     });
   });
 
   describe("warnings", () => {
     it("should parse enabled and disabled warnings", () => {
       assert.deepEqual(parseCommandLine({ args: ["-Wall", "-Wno-unused"] }), {
-        action: "link",
+        ...defaultOptions,
         warn: { all: true, unused: false }
       });
     });
@@ -184,7 +205,7 @@ describe("parseCommandLine", () => {
 
   describe("std", () => {
     it("should parse the language standard", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-std=c99"] }), { action: "link", std: "c99" });
+      assert.deepEqual(parseCommandLine({ args: ["-std=c99"] }), { ...defaultOptions, std: "c99" });
     });
 
     it("should reject an empty language standard", () => {
@@ -196,7 +217,7 @@ describe("parseCommandLine", () => {
 
   describe("libraries", () => {
     it("should parse libraries", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-lm", "-lc"] }), { action: "link", libraries: ["m", "c"] });
+      assert.deepEqual(parseCommandLine({ args: ["-lm", "-lc"] }), { ...defaultOptions, libraries: ["m", "c"] });
     });
 
     it("should reject -l without a library", () => {
@@ -209,36 +230,38 @@ describe("parseCommandLine", () => {
   describe("dependency info", () => {
     it("should preprocess and generate dependency info including system headers with -M", () => {
       assert.deepEqual(parseCommandLine({ args: ["-M"] }), {
+        ...defaultOptions,
         action: "preprocess",
-        dependencyInfo: { generate: true, includeSystemHeaderFiles: true }
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: true }
       });
     });
 
     it("should preprocess and generate dependency info excluding system headers with -MM", () => {
       assert.deepEqual(parseCommandLine({ args: ["-MM"] }), {
+        ...defaultOptions,
         action: "preprocess",
-        dependencyInfo: { generate: true, includeSystemHeaderFiles: false }
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: false }
       });
     });
 
     it("should generate a dependency file including system headers with -MD", () => {
       assert.deepEqual(parseCommandLine({ args: ["-MD"] }), {
-        action: "link",
-        dependencyInfo: { generate: true, includeSystemHeaderFiles: true, file: true }
+        ...defaultOptions,
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: true, file: true }
       });
     });
 
     it("should generate a dependency file excluding system headers with -MMD", () => {
       assert.deepEqual(parseCommandLine({ args: ["-MMD"] }), {
-        action: "link",
-        dependencyInfo: { generate: true, includeSystemHeaderFiles: false, file: true }
+        ...defaultOptions,
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: false, file: true }
       });
     });
 
     it("should parse target, filename and missing headers", () => {
       assert.deepEqual(parseCommandLine({ args: ["-MT", "a.o", "-MF", "a.d", "-MP"] }), {
-        action: "link",
-        dependencyInfo: { target: "a.o", file: true, filename: "a.d", includeMissing: true }
+        ...defaultOptions,
+        dependencyInfo: { ...defaultDependencyInfoOptions, target: "a.o", file: true, filename: "a.d", includeMissing: true }
       });
     });
   });

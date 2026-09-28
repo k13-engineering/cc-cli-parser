@@ -1,30 +1,36 @@
 import assert from "node:assert/strict";
 import { describe, it } from "mocha";
 import { formatCommandLine } from "./format-command-line.ts";
+import {
+  defaultDebugOptions,
+  defaultDependencyInfoOptions,
+  defaultOptimizationOptions,
+  defaultOptions
+} from "./options.ts";
 import type { TCcOptions } from "./options.ts";
 
 describe("formatCommandLine", () => {
   describe("action", () => {
     it("should format nothing for link", () => {
-      assert.deepEqual(formatCommandLine({ options: { action: "link" } }), []);
+      assert.deepEqual(formatCommandLine({ options: defaultOptions }), []);
     });
 
     it("should format -c for compile", () => {
-      assert.deepEqual(formatCommandLine({ options: { action: "compile" } }), ["-c"]);
+      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, action: "compile" } }), ["-c"]);
     });
 
     it("should format -E for preprocess", () => {
-      assert.deepEqual(formatCommandLine({ options: { action: "preprocess" } }), ["-E"]);
+      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, action: "preprocess" } }), ["-E"]);
     });
   });
 
   it("should format the target", () => {
-    assert.deepEqual(formatCommandLine({ options: { action: "link", target: "wasm32" } }), ["--target=wasm32"]);
+    assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, target: "wasm32" } }), ["--target=wasm32"]);
   });
 
   it("should format only enabled boolean flags", () => {
     const options: TCcOptions = {
-      action: "link",
+      ...defaultOptions,
       static: true,
       rdynamic: false,
       nolibc: true,
@@ -45,7 +51,12 @@ describe("formatCommandLine", () => {
   });
 
   it("should format all optimization options", () => {
-    assert.deepEqual(formatCommandLine({ options: { action: "link", optimization: { enable: true, level: 2, size: true } } }), [
+    const options: TCcOptions = {
+      ...defaultOptions,
+      optimization: { ...defaultOptimizationOptions, enable: true, level: 2, size: true }
+    };
+
+    assert.deepEqual(formatCommandLine({ options }), [
       "-O",
       "-O2",
       "-Os"
@@ -53,20 +64,31 @@ describe("formatCommandLine", () => {
   });
 
   it("should format all debug options", () => {
-    assert.deepEqual(formatCommandLine({ options: { action: "link", debug: { enable: true, level: 0 } } }), ["-g", "-g0"]);
+    const options: TCcOptions = {
+      ...defaultOptions,
+      debug: { ...defaultDebugOptions, enable: true, level: 0 }
+    };
+
+    assert.deepEqual(formatCommandLine({ options }), ["-g", "-g0"]);
   });
 
   it("should format no optimization and debug options when none are enabled", () => {
-    assert.deepEqual(formatCommandLine({ options: { action: "link", optimization: {}, debug: {} } }), []);
+    const options: TCcOptions = {
+      ...defaultOptions,
+      optimization: defaultOptimizationOptions,
+      debug: defaultDebugOptions
+    };
+
+    assert.deepEqual(formatCommandLine({ options }), []);
   });
 
   it("should format defines with and without value", () => {
-    assert.deepEqual(formatCommandLine({ options: { action: "link", defines: { A: true, B: "1" } } }), ["-DA", "-DB=1"]);
+    assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, defines: { A: true, B: "1" } } }), ["-DA", "-DB=1"]);
   });
 
   it("should format enabled, disabled and valued code generation options", () => {
     const options: TCcOptions = {
-      action: "link",
+      ...defaultOptions,
       codeGeneration: { pic: true, common: false, visibility: "default" }
     };
 
@@ -75,11 +97,11 @@ describe("formatCommandLine", () => {
 
   describe("warnings", () => {
     it("should format enabled and disabled warnings", () => {
-      assert.deepEqual(formatCommandLine({ options: { action: "link", warn: { all: true, unused: false } } }), ["-Wall", "-Wno-unused"]);
+      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, warn: { all: true, unused: false } } }), ["-Wall", "-Wno-unused"]);
     });
 
     it("should reject non-boolean warnings", () => {
-      const options = { action: "link", warn: { all: "yes" } } as unknown as TCcOptions;
+      const options = { ...defaultOptions, warn: { all: "yes" } } as unknown as TCcOptions;
 
       assert.throws(() => {
         formatCommandLine({ options });
@@ -89,13 +111,14 @@ describe("formatCommandLine", () => {
 
   describe("dependency info", () => {
     it("should format nothing for empty dependency info", () => {
-      assert.deepEqual(formatCommandLine({ options: { action: "link", dependencyInfo: {} } }), []);
+      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, dependencyInfo: defaultDependencyInfoOptions } }), []);
     });
 
     it("should format -MD for a dependency file including system headers", () => {
       const options: TCcOptions = {
+        ...defaultOptions,
         action: "compile",
-        dependencyInfo: { generate: true, file: true, includeSystemHeaderFiles: true }
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: true }
       };
 
       assert.deepEqual(formatCommandLine({ options }), ["-c", "-MD"]);
@@ -103,8 +126,9 @@ describe("formatCommandLine", () => {
 
     it("should format -MMD for a dependency file excluding system headers", () => {
       const options: TCcOptions = {
+        ...defaultOptions,
         action: "compile",
-        dependencyInfo: { generate: true, file: true, includeSystemHeaderFiles: false }
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: false }
       };
 
       assert.deepEqual(formatCommandLine({ options }), ["-c", "-MMD"]);
@@ -112,8 +136,9 @@ describe("formatCommandLine", () => {
 
     it("should format -M when preprocessing including system headers", () => {
       const options: TCcOptions = {
+        ...defaultOptions,
         action: "preprocess",
-        dependencyInfo: { generate: true, includeSystemHeaderFiles: true }
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: true }
       };
 
       assert.deepEqual(formatCommandLine({ options }), ["-E", "-M"]);
@@ -121,8 +146,9 @@ describe("formatCommandLine", () => {
 
     it("should format -MM when preprocessing excluding system headers", () => {
       const options: TCcOptions = {
+        ...defaultOptions,
         action: "preprocess",
-        dependencyInfo: { generate: true, includeSystemHeaderFiles: false }
+        dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, includeSystemHeaderFiles: false }
       };
 
       assert.deepEqual(formatCommandLine({ options }), ["-E", "-MM"]);
@@ -130,14 +156,20 @@ describe("formatCommandLine", () => {
 
     it("should reject dependency info without a file when not preprocessing", () => {
       assert.throws(() => {
-        formatCommandLine({ options: { action: "compile", dependencyInfo: { generate: true } } });
+        formatCommandLine({
+          options: {
+            ...defaultOptions,
+            action: "compile",
+            dependencyInfo: { ...defaultDependencyInfoOptions, generate: true }
+          }
+        });
       }, { message: "non-file dependency info requested but action is not preprocess" });
     });
 
     it("should format target, filename and missing headers", () => {
       const options: TCcOptions = {
-        action: "link",
-        dependencyInfo: { target: "a.o", file: true, filename: "a.d", includeMissing: true }
+        ...defaultOptions,
+        dependencyInfo: { ...defaultDependencyInfoOptions, target: "a.o", file: true, filename: "a.d", includeMissing: true }
       };
 
       assert.deepEqual(formatCommandLine({ options }), ["-MT", "a.o", "-MF", "a.d", "-MP"]);
@@ -145,15 +177,16 @@ describe("formatCommandLine", () => {
 
     it("should reject a filename when file output is not enabled", () => {
       assert.throws(() => {
-        formatCommandLine({ options: { action: "link", dependencyInfo: { filename: "a.d" } } });
+        formatCommandLine({ options: { ...defaultOptions, dependencyInfo: { ...defaultDependencyInfoOptions, filename: "a.d" } } });
       }, { message: "filename given but file output not enabled" });
     });
   });
 
   it("should format all options in a stable order", () => {
     const options: TCcOptions = {
+      ...defaultOptions,
       outputFile: "a.o",
-      dependencyInfo: { generate: true, file: true, includeSystemHeaderFiles: false },
+      dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: false },
       libraries: ["m"],
       warn: { all: true },
       codeGeneration: { pic: true },
@@ -161,8 +194,8 @@ describe("formatCommandLine", () => {
       libraryDirectories: ["lib"],
       includeFiles: ["config.h"],
       includeDirectories: ["include"],
-      debug: { enable: true },
-      optimization: { level: 2 },
+      debug: { ...defaultDebugOptions, enable: true },
+      optimization: { ...defaultOptimizationOptions, level: 2 },
       std: "c99",
       pthread: true,
       inputFiles: ["a.c"],

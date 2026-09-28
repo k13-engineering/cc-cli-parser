@@ -1,4 +1,10 @@
-import { booleanFlagNames } from "./options.ts";
+import {
+  booleanFlagNames,
+  defaultDebugOptions,
+  defaultDependencyInfoOptions,
+  defaultOptimizationOptions,
+  defaultOptions
+} from "./options.ts";
 import type {
   TCcAction,
   TCcCodeGenerationOptions,
@@ -18,11 +24,11 @@ type TParseState = {
   pendingValueHandler: TValueHandler | undefined;
 };
 
-const appendValue = ({ values = [], value }: { values?: readonly string[]; value: string }) => {
+const appendValue = ({ values = [], value }: { values: readonly string[] | undefined; value: string }) => {
   return [...values, value];
 };
 
-const appendUniqueValue = ({ values = [], value }: { values?: readonly string[]; value: string }) => {
+const appendUniqueValue = ({ values = [], value }: { values: readonly string[] | undefined; value: string }) => {
   if (values.includes(value)) {
     return values;
   }
@@ -58,10 +64,17 @@ const setAction = ({ action }: { action: TCcAction }): TFlagHandler => {
   };
 };
 
-const addDependencyInfo = ({ options, dependencyInfo }: { options: TCcOptions; dependencyInfo: TCcDependencyInfoOptions }) => {
+const addDependencyInfo = ({
+  options,
+  dependencyInfo
+}: {
+  options: TCcOptions;
+  dependencyInfo: Partial<TCcDependencyInfoOptions>;
+}) => {
   return {
     ...options,
     dependencyInfo: {
+      ...defaultDependencyInfoOptions,
       ...options.dependencyInfo,
       ...dependencyInfo
     }
@@ -88,10 +101,11 @@ const addCodeGeneration = ({ options, codeGeneration }: { options: TCcOptions; c
   };
 };
 
-const addDebug = ({ options, debug }: { options: TCcOptions; debug: TCcDebugOptions }) => {
+const addDebug = ({ options, debug }: { options: TCcOptions; debug: Partial<TCcDebugOptions> }) => {
   return {
     ...options,
     debug: {
+      ...defaultDebugOptions,
       ...options.debug,
       ...debug
     }
@@ -127,7 +141,10 @@ const addDefine: TValueHandler = ({ options, value }) => {
 };
 
 const setOptimization: TValueHandler = ({ options, value }) => {
-  const optimization: TCcOptimizationOptions = value === "s" ? { size: true } : parseLevelOrNamedOption({ value });
+  const optimization: TCcOptimizationOptions = {
+    ...defaultOptimizationOptions,
+    ...(value === "s" ? { size: true } : parseLevelOrNamedOption({ value }))
+  };
 
   return { ...options, optimization };
 };
@@ -294,7 +311,7 @@ const parseArg = ({ options, arg }: { options: TCcOptions; arg: string }): TPars
 
 const parseCommandLine = ({ args }: { args: readonly string[] }): TCcOptions => {
   const initialState: TParseState = {
-    options: { action: "link" },
+    options: defaultOptions,
     pendingValueHandler: undefined
   };
 
