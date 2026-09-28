@@ -86,27 +86,13 @@ describe("formatCommandLine", () => {
     assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, defines: { A: true, B: "1" } } }), ["-DA", "-DB=1"]);
   });
 
-  it("should format enabled, disabled and valued code generation options", () => {
+  it("should format unknown options with and without value", () => {
     const options: TCcOptions = {
       ...defaultOptions,
-      codeGeneration: { pic: true, common: false, visibility: "default" }
+      unknownOptions: { "-fpic": "", "-fvisibility": "default", "-Wno-unused": "", "-Ofast": "" }
     };
 
-    assert.deepEqual(formatCommandLine({ options }), ["-fpic", "-fno-common", "-fvisibility=default"]);
-  });
-
-  describe("warnings", () => {
-    it("should format enabled and disabled warnings", () => {
-      assert.deepEqual(formatCommandLine({ options: { ...defaultOptions, warn: { all: true, unused: false } } }), ["-Wall", "-Wno-unused"]);
-    });
-
-    it("should reject non-boolean warnings", () => {
-      const options = { ...defaultOptions, warn: { all: "yes" } } as unknown as TCcOptions;
-
-      assert.throws(() => {
-        formatCommandLine({ options });
-      }, { message: "unsupported value yes" });
-    });
+    assert.deepEqual(formatCommandLine({ options }), ["-fpic", "-fvisibility=default", "-Wno-unused", "-Ofast"]);
   });
 
   describe("dependency info", () => {
@@ -188,8 +174,7 @@ describe("formatCommandLine", () => {
       outputFile: "a.o",
       dependencyInfo: { ...defaultDependencyInfoOptions, generate: true, file: true, includeSystemHeaderFiles: false },
       libraries: ["m"],
-      warn: { all: true },
-      codeGeneration: { pic: true },
+      unknownOptions: { "-fpic": "", "-Wall": "" },
       defines: { A: true },
       libraryDirectories: ["lib"],
       includeFiles: ["config.h"],

@@ -4,13 +4,11 @@ type TCcOptimizationOptions = {
   enable: boolean | undefined;
   level: number | undefined;
   size: boolean | undefined;
-  [option: string]: boolean | number | undefined;
 };
 
 type TCcDebugOptions = {
   enable: boolean | undefined;
   level: number | undefined;
-  [option: string]: boolean | number | undefined;
 };
 
 type TCcDependencyInfoOptions = {
@@ -26,13 +24,10 @@ type TCcDefines = {
   readonly [name: string]: string | true;
 };
 
-type TCcCodeGenerationOptions = {
-  readonly [option: string]: string | boolean;
-};
-
-type TCcWarnOptions = {
-  readonly [option: string]: boolean;
-};
+// options of families like -f, -W, -O or -g that have no field of their own,
+// keyed by the option up to the first "=" and holding the rest (empty without "="),
+// e.g. -fvisibility=default -Wall becomes { "-fvisibility": "default", "-Wall": "" }
+type TCcUnknownOptions = Record<string, string>;
 
 type TCcOptions = {
   action: TCcAction;
@@ -54,9 +49,8 @@ type TCcOptions = {
   libraryDirectories: readonly string[] | undefined;
   libraries: readonly string[] | undefined;
   defines: TCcDefines | undefined;
-  codeGeneration: TCcCodeGenerationOptions | undefined;
-  warn: TCcWarnOptions | undefined;
   dependencyInfo: TCcDependencyInfoOptions | undefined;
+  unknownOptions: TCcUnknownOptions | undefined;
 };
 
 // flags that are either given or not, in the order they are formatted
@@ -113,9 +107,8 @@ const defaultOptions: TCcOptions = {
   libraryDirectories: undefined,
   libraries: undefined,
   defines: undefined,
-  codeGeneration: undefined,
-  warn: undefined,
   dependencyInfo: undefined,
+  unknownOptions: undefined,
 };
 
 export {
@@ -129,11 +122,10 @@ export {
 export type {
   TCcAction,
   TCcBooleanFlagName,
-  TCcCodeGenerationOptions,
   TCcDebugOptions,
   TCcDefines,
   TCcDependencyInfoOptions,
   TCcOptimizationOptions,
   TCcOptions,
-  TCcWarnOptions
+  TCcUnknownOptions
 };

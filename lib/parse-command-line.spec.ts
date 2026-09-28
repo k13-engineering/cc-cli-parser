@@ -112,25 +112,31 @@ describe("parseCommandLine", () => {
     });
   });
 
-  describe("code generation", () => {
-    it("should parse enabled, disabled and valued options", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-fpic", "-fno-common", "-fvisibility=default"] }), {
+  describe("unknown options", () => {
+    it("should keep -f options by name, with the value after the first equals", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-fpic", "-fno-common", "-fvisibility=default", "-fa=b=c"] }), {
         ...defaultOptions,
-        codeGeneration: { pic: true, common: false, visibility: "default" }
+        unknownOptions: { "-fpic": "", "-fno-common": "", "-fvisibility": "default", "-fa": "b=c" }
       });
     });
 
-    it("should use the last value given for an option", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-fno-pic", "-fpic"] }), {
+    it("should keep -W options by name", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-Wall", "-Wno-unused", "-Wl,-rpath=/lib"] }), {
         ...defaultOptions,
-        codeGeneration: { pic: true }
+        unknownOptions: { "-Wall": "", "-Wno-unused": "", "-Wl,-rpath": "/lib" }
       });
     });
 
-    it("should reject an option with multiple equals", () => {
+    it("should reject -W without a warning", () => {
       assert.throws(() => {
-        parseCommandLine({ args: ["-fa=b=c"] });
-      }, { message: `invalid -f option with multiple equals: "a=b=c"` });
+        parseCommandLine({ args: ["-W"] });
+      }, { message: "-W with arg not supported yet" });
+    });
+
+    it("should move a repeated option to the end", () => {
+      const { unknownOptions } = parseCommandLine({ args: ["-fpic", "-fno-pic", "-fpic"] });
+
+      assert.deepEqual(Object.keys(unknownOptions ?? {}), ["-fno-pic", "-fpic"]);
     });
   });
 
@@ -143,10 +149,11 @@ describe("parseCommandLine", () => {
       assert.deepEqual(parseCommandLine({ args: ["-g0"] }), { ...defaultOptions, debug: { ...defaultDebugOptions, level: 0 } });
     });
 
-    it("should parse enabled and disabled debug options", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-g", "-gdwarf", "-gno-pubnames"] }), {
+    it("should keep debug options without a field of their own as unknown options", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-g", "-gdwarf-4", "-gno-pubnames"] }), {
         ...defaultOptions,
-        debug: { ...defaultDebugOptions, enable: true, dwarf: true, pubnames: false }
+        debug: { ...defaultDebugOptions, enable: true },
+        unknownOptions: { "-gdwarf-4": "", "-gno-pubnames": "" }
       });
     });
   });
@@ -173,11 +180,8 @@ describe("parseCommandLine", () => {
       });
     });
 
-    it("should parse named optimizations", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-Ofast"] }), {
-        ...defaultOptions,
-        optimization: { ...defaultOptimizationOptions, fast: true }
-      });
+    it("should keep optimizations without a field of their own as unknown options", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-Ofast"] }), { ...defaultOptions, unknownOptions: { "-Ofast": "" } });
     });
 
     it("should use the last optimization given", () => {
@@ -186,20 +190,24 @@ describe("parseCommandLine", () => {
         optimization: { ...defaultOptimizationOptions, size: true }
       });
     });
-  });
 
-  describe("warnings", () => {
-    it("should parse enabled and disabled warnings", () => {
-      assert.deepEqual(parseCommandLine({ args: ["-Wall", "-Wno-unused"] }), {
+    it("should let an unknown optimization replace earlier optimizations", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-O2", "-Ofast", "-Og"] }), { ...defaultOptions, unknownOptions: { "-Og": "" } });
+    });
+
+    it("should let an optimization replace an earlier unknown optimization", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-Ofast", "-O2"] }), {
         ...defaultOptions,
-        warn: { all: true, unused: false }
+        optimization: { ...defaultOptimizationOptions, level: 2 }
       });
     });
 
-    it("should reject -W without a warning", () => {
-      assert.throws(() => {
-        parseCommandLine({ args: ["-W"] });
-      }, { message: "-W with arg not supported yet" });
+    it("should keep other unknown options when replacing an unknown optimization", () => {
+      assert.deepEqual(parseCommandLine({ args: ["-fpic", "-Ofast", "-O2"] }), {
+        ...defaultOptions,
+        optimization: { ...defaultOptimizationOptions, level: 2 },
+        unknownOptions: { "-fpic": "" }
+      });
     });
   });
 

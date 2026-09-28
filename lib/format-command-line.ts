@@ -1,4 +1,8 @@
-import { booleanFlagNames } from "./options.ts";
+import {
+  booleanFlagNames,
+  defaultDebugOptions,
+  defaultOptimizationOptions
+} from "./options.ts";
 import type {
   TCcAction,
   TCcDependencyInfoOptions,
@@ -11,30 +15,6 @@ const actionArgs: { readonly [action in TCcAction]: readonly string[] } = {
   link: [],
   compile: ["-c"],
   preprocess: ["-E"],
-};
-
-const formatCodeGenerationOption = ({ name, value }: { name: string; value: string | boolean }) => {
-  if (value === true) {
-    return `-f${name}`;
-  }
-
-  if (value === false) {
-    return `-fno-${name}`;
-  }
-
-  return `-f${name}=${value}`;
-};
-
-const formatWarnOption = ({ name, value }: { name: string; value: boolean }) => {
-  if (value === true) {
-    return `-W${name}`;
-  }
-
-  if (value === false) {
-    return `-Wno-${name}`;
-  }
-
-  throw Error(`unsupported value ${value}`);
 };
 
 const formatLevelOrEnableOption = ({
@@ -121,7 +101,7 @@ const formatStd: TFormatter = ({ options }) => {
 };
 
 const formatOptimization: TFormatter = ({ options }) => {
-  const { enable, level, size } = options.optimization ?? {};
+  const { enable, level, size } = options.optimization ?? defaultOptimizationOptions;
 
   return [
     ...formatLevelOrEnableOption({ option: "-O", enable, level }),
@@ -130,7 +110,7 @@ const formatOptimization: TFormatter = ({ options }) => {
 };
 
 const formatDebug: TFormatter = ({ options }) => {
-  const { enable, level } = options.debug ?? {};
+  const { enable, level } = options.debug ?? defaultDebugOptions;
 
   return formatLevelOrEnableOption({ option: "-g", enable, level });
 };
@@ -159,15 +139,9 @@ const formatDefines: TFormatter = ({ options }) => {
   });
 };
 
-const formatCodeGeneration: TFormatter = ({ options }) => {
-  return Object.entries(options.codeGeneration ?? {}).map(([name, value]) => {
-    return formatCodeGenerationOption({ name, value });
-  });
-};
-
-const formatWarn: TFormatter = ({ options }) => {
-  return Object.entries(options.warn ?? {}).map(([name, value]) => {
-    return formatWarnOption({ name, value });
+const formatUnknownOptions: TFormatter = ({ options }) => {
+  return Object.entries(options.unknownOptions ?? {}).map(([option, value]) => {
+    return value === "" ? option : `${option}=${value}`;
   });
 };
 
@@ -208,8 +182,7 @@ const formatters: readonly TFormatter[] = [
   formatIncludeFiles,
   formatLibraryDirectories,
   formatDefines,
-  formatCodeGeneration,
-  formatWarn,
+  formatUnknownOptions,
   formatLibraries,
   formatDependencyInfo,
   formatOutputFile,

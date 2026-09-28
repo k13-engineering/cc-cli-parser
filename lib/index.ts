@@ -24,11 +24,10 @@ export type {
 export type {
   TCcAction,
   TCcBooleanFlagName,
-  TCcCodeGenerationOptions,
   TCcDebugOptions,
   TCcDefines,
   TCcDependencyInfoOptions,
   TCcOptimizationOptions,
   TCcOptions,
-  TCcWarnOptions
+  TCcUnknownOptions
 } from "./options.ts";

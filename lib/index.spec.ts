@@ -28,7 +28,8 @@ describe("createCompilerCommandLineParser", () => {
     "a.c -static",
     "-fno-common",
     "-g2",
-    "-E a.c -Iinclude -include config.h -DA -DB=1 -MM -MT a.o -MP"
+    "-E a.c -Iinclude -include config.h -DA -DB=1 -MM -MT a.o -MP",
+    "-c a.c -Og -gdwarf-4 -Wall -Wno-unused -Wl,-rpath=/lib -fpic -fno-pic"
   ].forEach((argsAsString) => {
     it(`should parse "${argsAsString}" correctly`, () => {
       const args = argsAsString.split(/\s+/);

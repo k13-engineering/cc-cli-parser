@@ -7,17 +7,17 @@ import {
 } from "./options.ts";
 import type {
   TCcAction,
-  TCcCodeGenerationOptions,
   TCcDebugOptions,
   TCcDefines,
   TCcDependencyInfoOptions,
   TCcOptimizationOptions,
   TCcOptions,
-  TCcWarnOptions
+  TCcUnknownOptions
 } from "./options.ts";
 
 type TFlagHandler = ({ options }: { options: TCcOptions }) => TCcOptions;
 type TValueHandler = ({ options, value }: { options: TCcOptions; value: string }) => TCcOptions;
+type TPrefixHandler = ({ options, value, arg }: { options: TCcOptions; value: string; arg: string }) => TCcOptions;
 
 type TParseState = {
   options: TCcOptions;
@@ -36,26 +36,33 @@ const appendUniqueValue = ({ values = [], value }: { values: readonly string[] |
   return appendValue({ values, value });
 };
 
-const parseKeyValue = ({ text, description }: { text: string; description: string }): { [key: string]: string | true } => {
-  const [key, ...values] = text.split("=");
+const parseDefine = ({ define }: { define: string }): TCcDefines => {
+  const [name, ...values] = define.split("=");
 
   if (values.length > 1) {
-    throw Error(`invalid ${description} with multiple equals: "${text}"`);
+    throw Error(`invalid define with multiple equals: "${define}"`);
   }
 
   return {
-    [key]: values.length === 0 ? true : values[0]
+    [name]: values.length === 0 ? true : values[0]
   };
 };
 
-const parseLevelOrNamedOption = ({ value }: { value: string }): { [key: string]: boolean | number } => {
+// an empty value enables the option and a number sets its level, anything else has no field of its own
+const parseLevelOrEnable = ({ value }: { value: string }) => {
   if (value === "") {
     return { enable: true };
   }
 
-  const level = Number.parseInt(value, 10);
+  if (/^[0-9]+$/.test(value)) {
+    return { level: Number.parseInt(value, 10) };
+  }
 
-  return Number.isNaN(level) ? { [value]: true } : { level };
+  return undefined;
+};
+
+const parseOptimization = ({ value }: { value: string }): Partial<TCcOptimizationOptions> | undefined => {
+  return value === "s" ? { size: true } : parseLevelOrEnable({ value });
 };
 
 const setAction = ({ action }: { action: TCcAction }): TFlagHandler => {
@@ -91,14 +98,26 @@ const addDefines = ({ options, defines }: { options: TCcOptions; defines: TCcDef
   };
 };
 
-const addCodeGeneration = ({ options, codeGeneration }: { options: TCcOptions; codeGeneration: TCcCodeGenerationOptions }) => {
+// a repeated option moves to the end, so that the last one given still wins when formatted
+const addUnknownOption = ({ options, arg }: { options: TCcOptions; arg: string }): TCcOptions => {
+  const [option, ...valueParts] = arg.split("=");
+  const { [option]: previousValue, ...otherUnknownOptions } = options.unknownOptions ?? {};
+
   return {
     ...options,
-    codeGeneration: {
-      ...options.codeGeneration,
-      ...codeGeneration
+    unknownOptions: {
+      ...otherUnknownOptions,
+      [option]: valueParts.join("=")
     }
   };
+};
+
+const removeUnknownOptimizations = ({ unknownOptions = {} }: { unknownOptions: TCcUnknownOptions | undefined }) => {
+  const remainingUnknownOptions = Object.entries(unknownOptions).filter(([option]) => {
+    return !option.startsWith("-O");
+  });
+
+  return remainingUnknownOptions.length === 0 ? undefined : Object.fromEntries(remainingUnknownOptions);
 };
 
 const addDebug = ({ options, debug }: { options: TCcOptions; debug: Partial<TCcDebugOptions> }) => {
@@ -108,16 +127,6 @@ const addDebug = ({ options, debug }: { options: TCcOptions; debug: Partial<TCcD
       ...defaultDebugOptions,
       ...options.debug,
       ...debug
-    }
-  };
-};
-
-const addWarn = ({ options, warn }: { options: TCcOptions; warn: TCcWarnOptions }) => {
-  return {
-    ...options,
-    warn: {
-      ...options.warn,
-      ...warn
     }
   };
 };
@@ -137,24 +146,44 @@ const addLibraryDirectory: TValueHandler = ({ options, value }) => {
 };
 
 const addDefine: TValueHandler = ({ options, value }) => {
-  return addDefines({ options, defines: parseKeyValue({ text: value, description: "define" }) });
+  return addDefines({ options, defines: parseDefine({ define: value }) });
 };
 
-const setOptimization: TValueHandler = ({ options, value }) => {
-  const optimization: TCcOptimizationOptions = {
-    ...defaultOptimizationOptions,
-    ...(value === "s" ? { size: true } : parseLevelOrNamedOption({ value }))
+const setDebug: TPrefixHandler = ({ options, value, arg }) => {
+  const debug = parseLevelOrEnable({ value });
+
+  if (debug === undefined) {
+    return addUnknownOption({ options, arg });
+  }
+
+  return addDebug({ options, debug });
+};
+
+// the last optimization given wins, whether it has a field of its own or not
+const setOptimization: TPrefixHandler = ({ options, value, arg }) => {
+  const optimization = parseOptimization({ value });
+  const optionsWithoutOptimization: TCcOptions = {
+    ...options,
+    optimization: undefined,
+    unknownOptions: removeUnknownOptimizations({ unknownOptions: options.unknownOptions })
   };
 
-  return { ...options, optimization };
+  if (optimization === undefined) {
+    return addUnknownOption({ options: optionsWithoutOptimization, arg });
+  }
+
+  return {
+    ...optionsWithoutOptimization,
+    optimization: { ...defaultOptimizationOptions, ...optimization }
+  };
 };
 
-const setWarn: TValueHandler = ({ options, value }) => {
+const addWarning: TPrefixHandler = ({ options, value, arg }) => {
   if (value === "") {
     throw Error("-W with arg not supported yet");
   }
 
-  return addWarn({ options, warn: { [value]: true } });
+  return addUnknownOption({ options, arg });
 };
 
 const setStd: TValueHandler = ({ options, value }) => {
@@ -233,34 +262,12 @@ const valueHandlers: { readonly [option: string]: TValueHandler } = {
   },
 };
 
-// options whose value is appended to them, e.g. "-O2", more specific prefixes first
-const prefixHandlers: readonly { prefix: string; handler: TValueHandler }[] = [
-  {
-    prefix: "-fno-",
-    handler: ({ options, value }) => {
-      return addCodeGeneration({ options, codeGeneration: { [value]: false } });
-    }
-  },
-  {
-    prefix: "-f",
-    handler: ({ options, value }) => {
-      return addCodeGeneration({ options, codeGeneration: parseKeyValue({ text: value, description: "-f option" }) });
-    }
-  },
+// options whose value is appended to them, e.g. "-O2"
+const prefixHandlers: readonly { prefix: string; handler: TPrefixHandler }[] = [
+  { prefix: "-f", handler: addUnknownOption },
   { prefix: "-I", handler: addIncludeDirectory },
   { prefix: "-L", handler: addLibraryDirectory },
-  {
-    prefix: "-gno-",
-    handler: ({ options, value }) => {
-      return addDebug({ options, debug: { [value]: false } });
-    }
-  },
-  {
-    prefix: "-g",
-    handler: ({ options, value }) => {
-      return addDebug({ options, debug: parseLevelOrNamedOption({ value }) });
-    }
-  },
+  { prefix: "-g", handler: setDebug },
   { prefix: "-O", handler: setOptimization },
   {
     // ignore for now
@@ -270,13 +277,7 @@ const prefixHandlers: readonly { prefix: string; handler: TValueHandler }[] = [
     }
   },
   { prefix: "-D", handler: addDefine },
-  {
-    prefix: "-Wno-",
-    handler: ({ options, value }) => {
-      return addWarn({ options, warn: { [value]: false } });
-    }
-  },
-  { prefix: "-W", handler: setWarn },
+  { prefix: "-W", handler: addWarning },
   { prefix: "-std=", handler: setStd },
   { prefix: "-l", handler: addLibrary },
 ];
@@ -290,7 +291,7 @@ const parsePrefixedOption = ({ options, arg }: { options: TCcOptions; arg: strin
     throw Error(`unknown option ${arg}`);
   }
 
-  return prefixHandler.handler({ options, value: arg.slice(prefixHandler.prefix.length) });
+  return prefixHandler.handler({ options, value: arg.slice(prefixHandler.prefix.length), arg });
 };
 
 const parseArg = ({ options, arg }: { options: TCcOptions; arg: string }): TParseState => {
