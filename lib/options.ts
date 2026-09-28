@@ -1,12 +1,3 @@
-import {
-  codeGenerationToggles,
-  debugToggles,
-  languageToggles,
-  linkerToggles,
-  machineToggles,
-  namedWarnings
-} from "./option-descriptors.ts";
-
 // the earliest stage wins, e.g. -E together with -c only preprocesses
 type TCcAction =
   // -E, also implied by -M and -MM
@@ -58,8 +49,8 @@ type TCcInput =
     // a path, "-" for stdin
     kind: "file";
     path: string;
-    // the -x in effect, undefined after -x none
-    language: TCcLanguage | undefined;
+    // the -x in effect, none after -x none
+    language?: TCcLanguage;
   }
   | {
     // -l<name>, -l <name>
@@ -148,7 +139,7 @@ type TCcMacro =
     // -D<name>, -D<name>=<value>
     kind: "define";
     name: string;
-    value: string | undefined;
+    value?: string;
   }
   | {
     // -U<name>
@@ -212,321 +203,321 @@ type TCcAppleDeploymentTarget = {
 
 // -W<name>[=<value>], -Wno-<name>, -Werror=<name>, -Wno-error=<name>
 type TCcWarning = {
-  enabled: boolean | undefined;
-  error: boolean | undefined;
-  value: string | undefined;
+  enabled?: boolean;
+  error?: boolean;
+  value?: string;
 };
 
 type TCcDriverOptions = {
   // -v
-  verbose: true | undefined;
+  verbose?: true;
   // -###
-  dryRun: true | undefined;
+  dryRun?: true;
   // -pipe
-  pipe: true | undefined;
+  pipe?: true;
   // -pthread
-  pthread: true | undefined;
+  pthread?: true;
   // -emit-llvm
-  emitLlvm: true | undefined;
+  emitLlvm?: true;
   // -no-canonical-prefixes
-  noCanonicalPrefixes: true | undefined;
+  noCanonicalPrefixes?: true;
   // -Qunused-arguments
-  suppressUnusedArgumentWarnings: true | undefined;
+  suppressUnusedArgumentWarnings?: true;
   // -fintegrated-as, -fno-integrated-as, -integrated-as, -no-integrated-as
-  integratedAssembler: boolean | undefined;
+  integratedAssembler?: boolean;
   // -save-temps, -save-temps=<where>
-  saveTemps: "cwd" | "obj" | undefined;
+  saveTemps?: "cwd" | "obj";
   // -working-directory <dir>
-  workingDirectory: string | undefined;
+  workingDirectory?: string;
   // -MJ <file>
-  compilationDatabaseFile: string | undefined;
+  compilationDatabaseFile?: string;
   // -index-store-path <dir>
-  indexStorePath: string | undefined;
+  indexStorePath?: string;
   // -B<prefix>
-  toolchainPrefixes: readonly string[];
+  toolchainPrefixes?: readonly string[];
   // -specs=<file>, --specs=<file>
-  specs: readonly string[];
+  specs?: readonly string[];
   // -fplugin=<file>
-  plugins: readonly string[];
+  plugins?: readonly string[];
   // -Xclang <argument>
-  clangArguments: readonly string[];
+  clangArguments?: readonly string[];
   // -mllvm <argument>
-  llvmArguments: readonly string[];
+  llvmArguments?: readonly string[];
   // -Wa,<arguments>, -Xassembler <argument>
-  assemblerArguments: readonly string[];
+  assemblerArguments?: readonly string[];
   // -Wp,<arguments>, -Xpreprocessor <argument>
-  preprocessorArguments: readonly string[];
+  preprocessorArguments?: readonly string[];
   // --param <name>=<value>, --param=<name>=<value>
-  parameters: readonly TCcParameter[];
+  parameters?: readonly TCcParameter[];
   // -Xarch_<architecture> <argument>
-  architectureArguments: readonly TCcArchitectureArgument[];
+  architectureArguments?: readonly TCcArchitectureArgument[];
 };
 
 type TCcTargetOptions = {
   // --target=<triple>, -target <triple>
-  triple: string | undefined;
+  triple?: string;
   // --sysroot=<dir>, --sysroot <dir>
-  sysroot: string | undefined;
+  sysroot?: string;
   // -isysroot <dir>
-  headerSysroot: string | undefined;
+  headerSysroot?: string;
   // --gcc-toolchain=<dir>, -gcc-toolchain <dir>
-  gccToolchain: string | undefined;
+  gccToolchain?: string;
   // -resource-dir <dir>
-  resourceDirectory: string | undefined;
+  resourceDirectory?: string;
   // -arch <architecture>
-  architectures: readonly string[];
+  architectures?: readonly string[];
   // -mmacosx-version-min=<version> and alike
-  appleDeploymentTarget: TCcAppleDeploymentTarget | undefined;
+  appleDeploymentTarget?: TCcAppleDeploymentTarget;
 };
 
 type TCcLanguageOptions = {
   // -std=<standard>, --std=<standard>, --std <standard>
-  standard: string | undefined;
+  standard?: string;
   // -ansi
-  ansi: true | undefined;
+  ansi?: true;
   // -stdlib=<library>
-  cxxStandardLibrary: "libc++" | "libstdc++" | "platform" | undefined;
+  cxxStandardLibrary?: "libc++" | "libstdc++" | "platform";
   // -fsigned-char, -funsigned-char
-  charSignedness: "signed" | "unsigned" | undefined;
+  charSignedness?: "signed" | "unsigned";
   // -fhosted, -ffreestanding
-  environment: "hosted" | "freestanding" | undefined;
+  environment?: "hosted" | "freestanding";
   // -fopenmp, -fopenmp=<runtime>, -fno-openmp
-  openmp: boolean | string | undefined;
+  openmp?: boolean | string;
   // -finput-charset=<charset>
-  inputCharset: string | undefined;
+  inputCharset?: string;
   // -fexec-charset=<charset>
-  execCharset: string | undefined;
+  execCharset?: string;
   // -fwide-exec-charset=<charset>
-  wideExecCharset: string | undefined;
+  wideExecCharset?: string;
   // -ftemplate-depth=<depth>
-  templateDepth: number | undefined;
+  templateDepth?: number;
   // -fconstexpr-depth=<depth>
-  constexprDepth: number | undefined;
+  constexprDepth?: number;
   // -fno-builtin-<function>
-  disabledBuiltins: readonly string[];
+  disabledBuiltins?: readonly string[];
   // -fmodule-name=<name>
-  moduleName: string | undefined;
+  moduleName?: string;
   // -fmodules-cache-path=<dir>
-  modulesCachePath: string | undefined;
+  modulesCachePath?: string;
   // -fmodule-map-file=<file>
-  moduleMapFiles: readonly string[];
+  moduleMapFiles?: readonly string[];
   // -fmodule-file=[<name>=]<file>
-  moduleFiles: readonly string[];
+  moduleFiles?: readonly string[];
   // -fprebuilt-module-path=<dir>
-  prebuiltModulePaths: readonly string[];
+  prebuiltModulePaths?: readonly string[];
 
   // -f<name>, -fno-<name>
-  builtin: boolean | undefined;
-  exceptions: boolean | undefined;
-  cxxExceptions: boolean | undefined;
-  rtti: boolean | undefined;
-  threadsafeStatics: boolean | undefined;
-  permissive: boolean | undefined;
-  msExtensions: boolean | undefined;
-  msCompatibility: boolean | undefined;
-  declspec: boolean | undefined;
-  gnu89Inline: boolean | undefined;
-  gnuKeywords: boolean | undefined;
-  asm: boolean | undefined;
-  blocks: boolean | undefined;
-  objcArc: boolean | undefined;
-  modules: boolean | undefined;
-  coroutines: boolean | undefined;
-  shortEnums: boolean | undefined;
-  shortWchar: boolean | undefined;
-  dollarsInIdentifiers: boolean | undefined;
-  signedBitfields: boolean | undefined;
-  sizedDeallocation: boolean | undefined;
-  char8T: boolean | undefined;
-  strictEnums: boolean | undefined;
-  delayedTemplateParsing: boolean | undefined;
+  builtin?: boolean;
+  exceptions?: boolean;
+  cxxExceptions?: boolean;
+  rtti?: boolean;
+  threadsafeStatics?: boolean;
+  permissive?: boolean;
+  msExtensions?: boolean;
+  msCompatibility?: boolean;
+  declspec?: boolean;
+  gnu89Inline?: boolean;
+  gnuKeywords?: boolean;
+  asm?: boolean;
+  blocks?: boolean;
+  objcArc?: boolean;
+  modules?: boolean;
+  coroutines?: boolean;
+  shortEnums?: boolean;
+  shortWchar?: boolean;
+  dollarsInIdentifiers?: boolean;
+  signedBitfields?: boolean;
+  sizedDeallocation?: boolean;
+  char8T?: boolean;
+  strictEnums?: boolean;
+  delayedTemplateParsing?: boolean;
 };
 
 type TCcMachineOptions = {
   // -march=<architecture>
-  architecture: string | undefined;
+  architecture?: string;
   // -mtune=<cpu>
-  tune: string | undefined;
+  tune?: string;
   // -mcpu=<cpu>
-  cpu: string | undefined;
+  cpu?: string;
   // -mfpu=<fpu>
-  fpu: string | undefined;
+  fpu?: string;
   // -mabi=<abi>
-  abi: string | undefined;
+  abi?: string;
   // -mcmodel=<model>
-  codeModel: string | undefined;
+  codeModel?: string;
   // -mfloat-abi=<abi>
-  floatAbi: "soft" | "softfp" | "hard" | undefined;
+  floatAbi?: "soft" | "softfp" | "hard";
   // -mbranch-protection=<protection>
-  branchProtection: string | undefined;
+  branchProtection?: string;
   // -mindirect-branch=<choice>
-  indirectBranch: string | undefined;
+  indirectBranch?: string;
   // -mfunction-return=<choice>
-  functionReturn: string | undefined;
+  functionReturn?: string;
   // -mtls-dialect=<dialect>
-  tlsDialect: string | undefined;
+  tlsDialect?: string;
   // -mfpmath=<unit>
-  fpmath: string | undefined;
+  fpmath?: string;
   // -masm=<dialect>
-  asmDialect: "att" | "intel" | undefined;
+  asmDialect?: "att" | "intel";
   // -mstack-protector-guard=<guard>
-  stackProtectorGuard: string | undefined;
+  stackProtectorGuard?: string;
   // -mstack-protector-guard-reg=<register>
-  stackProtectorGuardRegister: string | undefined;
+  stackProtectorGuardRegister?: string;
   // -mstack-protector-guard-offset=<offset>
-  stackProtectorGuardOffset: string | undefined;
+  stackProtectorGuardOffset?: string;
   // -mpreferred-stack-boundary=<n>
-  preferredStackBoundary: number | undefined;
+  preferredStackBoundary?: number;
   // -mincoming-stack-boundary=<n>
-  incomingStackBoundary: number | undefined;
+  incomingStackBoundary?: number;
   // -mregparm=<n>
-  regparm: number | undefined;
+  regparm?: number;
   // -G<n>, -G <n>
-  smallDataThreshold: number | undefined;
+  smallDataThreshold?: number;
   // -m16, -m32, -m64, -mx32
-  wordSize: "16" | "32" | "64" | "x32" | undefined;
+  wordSize?: "16" | "32" | "64" | "x32";
   // -marm, -mthumb
-  instructionSet: "arm" | "thumb" | undefined;
+  instructionSet?: "arm" | "thumb";
   // -mlittle-endian, -mbig-endian
-  endianness: "little" | "big" | undefined;
+  endianness?: "little" | "big";
   // -msoft-float, -mhard-float
-  floatingPoint: "soft" | "hard" | undefined;
+  floatingPoint?: "soft" | "hard";
   // -mconsole, -mwindows
-  subsystem: "console" | "windows" | undefined;
+  subsystem?: "console" | "windows";
 
   // -m<name>, -mno-<name>
-  mmx: boolean | undefined;
-  sse: boolean | undefined;
-  sse2: boolean | undefined;
-  sse3: boolean | undefined;
-  ssse3: boolean | undefined;
-  sse41: boolean | undefined;
-  sse42: boolean | undefined;
-  avx: boolean | undefined;
-  avx2: boolean | undefined;
-  avx512f: boolean | undefined;
-  fma: boolean | undefined;
-  f16c: boolean | undefined;
-  bmi: boolean | undefined;
-  bmi2: boolean | undefined;
-  popcnt: boolean | undefined;
-  lzcnt: boolean | undefined;
-  aes: boolean | undefined;
-  pclmul: boolean | undefined;
-  rdrnd: boolean | undefined;
-  movbe: boolean | undefined;
-  cx16: boolean | undefined;
-  x87: boolean | undefined;
-  amd3dnow: boolean | undefined;
-  redZone: boolean | undefined;
-  fpRetIn387: boolean | undefined;
-  generalRegsOnly: boolean | undefined;
-  omitLeafFramePointer: boolean | undefined;
-  stackrealign: boolean | undefined;
-  fentry: boolean | undefined;
-  recordMcount: boolean | undefined;
-  nopMcount: boolean | undefined;
-  retpoline: boolean | undefined;
-  indirectBranchRegister: boolean | undefined;
-  skipRaxSetup: boolean | undefined;
-  unalignedAccess: boolean | undefined;
-  strictAlign: boolean | undefined;
-  outlineAtomics: boolean | undefined;
-  longCalls: boolean | undefined;
-  relax: boolean | undefined;
-  msBitfields: boolean | undefined;
-  unicode: boolean | undefined;
-  threads: boolean | undefined;
-  dll: boolean | undefined;
-  abicalls: boolean | undefined;
+  mmx?: boolean;
+  sse?: boolean;
+  sse2?: boolean;
+  sse3?: boolean;
+  ssse3?: boolean;
+  sse41?: boolean;
+  sse42?: boolean;
+  avx?: boolean;
+  avx2?: boolean;
+  avx512f?: boolean;
+  fma?: boolean;
+  f16c?: boolean;
+  bmi?: boolean;
+  bmi2?: boolean;
+  popcnt?: boolean;
+  lzcnt?: boolean;
+  aes?: boolean;
+  pclmul?: boolean;
+  rdrnd?: boolean;
+  movbe?: boolean;
+  cx16?: boolean;
+  x87?: boolean;
+  amd3dnow?: boolean;
+  redZone?: boolean;
+  fpRetIn387?: boolean;
+  generalRegsOnly?: boolean;
+  omitLeafFramePointer?: boolean;
+  stackrealign?: boolean;
+  fentry?: boolean;
+  recordMcount?: boolean;
+  nopMcount?: boolean;
+  retpoline?: boolean;
+  indirectBranchRegister?: boolean;
+  skipRaxSetup?: boolean;
+  unalignedAccess?: boolean;
+  strictAlign?: boolean;
+  outlineAtomics?: boolean;
+  longCalls?: boolean;
+  relax?: boolean;
+  msBitfields?: boolean;
+  unicode?: boolean;
+  threads?: boolean;
+  dll?: boolean;
+  abicalls?: boolean;
 };
 
 type TCcPreprocessorOptions = {
   // -D, -U
-  macros: readonly TCcMacro[];
+  macros?: readonly TCcMacro[];
   // -I<dir>
-  includeDirectories: readonly string[];
+  includeDirectories?: readonly string[];
   // -iquote <dir>
-  quoteIncludeDirectories: readonly string[];
+  quoteIncludeDirectories?: readonly string[];
   // -isystem <dir>
-  systemIncludeDirectories: readonly string[];
+  systemIncludeDirectories?: readonly string[];
   // -idirafter <dir>
-  afterIncludeDirectories: readonly string[];
+  afterIncludeDirectories?: readonly string[];
   // -F<dir>
-  frameworkDirectories: readonly string[];
+  frameworkDirectories?: readonly string[];
   // -iframework <dir>
-  systemFrameworkDirectories: readonly string[];
+  systemFrameworkDirectories?: readonly string[];
   // -iprefix <prefix>
-  includePrefix: string | undefined;
+  includePrefix?: string;
   // -iwithprefix <dir>
-  prefixedIncludeDirectories: readonly string[];
+  prefixedIncludeDirectories?: readonly string[];
   // -iwithprefixbefore <dir>
-  prefixedBeforeIncludeDirectories: readonly string[];
+  prefixedBeforeIncludeDirectories?: readonly string[];
   // -imultilib <dir>
-  multilib: string | undefined;
+  multilib?: string;
   // -include <file>
-  includeFiles: readonly string[];
+  includeFiles?: readonly string[];
   // -imacros <file>
-  macroFiles: readonly string[];
+  macroFiles?: readonly string[];
   // -include-pch <file>
-  precompiledHeader: string | undefined;
+  precompiledHeader?: string;
   // -ivfsoverlay <file>
-  vfsOverlays: readonly string[];
+  vfsOverlays?: readonly string[];
   // -A<assertion>
-  assertions: readonly string[];
+  assertions?: readonly string[];
   // -nostdinc
-  nostdinc: true | undefined;
+  nostdinc?: true;
   // -nostdinc++
-  nostdincxx: true | undefined;
+  nostdincxx?: true;
   // -undef
-  undef: true | undefined;
+  undef?: true;
   // -P
-  noLineMarkers: true | undefined;
+  noLineMarkers?: true;
   // -H
-  printIncludes: true | undefined;
+  printIncludes?: true;
   // -traditional
-  traditional: true | undefined;
+  traditional?: true;
   // -traditional-cpp
-  traditionalCpp: true | undefined;
+  traditionalCpp?: true;
   // -trigraphs
-  trigraphs: true | undefined;
+  trigraphs?: true;
   // -dI
-  includeDump: true | undefined;
+  includeDump?: true;
   // -C, -CC
-  comments: "keep" | "keep-in-macros" | undefined;
+  comments?: "keep" | "keep-in-macros";
   // -dM, -dD, -dN, -dU
-  macroDump: "definitions" | "definitions-and-output" | "names" | "used" | undefined;
+  macroDump?: "definitions" | "definitions-and-output" | "names" | "used";
 
   // -f<name>, -fno-<name>
-  directivesOnly: boolean | undefined;
-  preprocessed: boolean | undefined;
-  workingDirectory: boolean | undefined;
+  directivesOnly?: boolean;
+  preprocessed?: boolean;
+  workingDirectory?: boolean;
 };
 
 type TCcDependencyOptions = {
   // -M, -MM, -MD, -MMD
-  generate: true | undefined;
+  generate?: true;
   // -M, -MD instead of -MM, -MMD
-  includeSystemHeaderFiles: boolean | undefined;
+  includeSystemHeaderFiles?: boolean;
   // -MD, -MMD, -MF
-  file: true | undefined;
+  file?: true;
   // -MF <file>
-  filename: string | undefined;
+  filename?: string;
   // -MT <target>, -MQ <target>
-  targets: readonly TCcDependencyTarget[];
+  targets?: readonly TCcDependencyTarget[];
   // -MP
-  includeMissing: true | undefined;
+  includeMissing?: true;
   // -MG
-  missingHeadersAreGenerated: true | undefined;
+  missingHeadersAreGenerated?: true;
 };
 
 type TCcDebugOptions = {
   // -g
-  enable: true | undefined;
+  enable?: true;
   // -g<level>
-  level: number | undefined;
+  level?: number;
   // -ggdb and alike
-  format:
+  format?:
     | "gdb"
     | "lldb"
     | "sce"
@@ -539,441 +530,440 @@ type TCcDebugOptions = {
     | "vms"
     | "codeview"
     | "btf"
-    | "ctf"
-    | undefined;
+    | "ctf";
   // -gdwarf-<version>
-  dwarfVersion: number | undefined;
+  dwarfVersion?: number;
   // -gdwarf32, -gdwarf64
-  dwarfFormat: "32" | "64" | undefined;
+  dwarfFormat?: "32" | "64";
   // -gz, -gz=<type>
-  compression: "none" | "zlib" | "zlib-gnu" | "zstd" | undefined;
+  compression?: "none" | "zlib" | "zlib-gnu" | "zstd";
   // -gline-tables-only
-  lineTablesOnly: true | undefined;
+  lineTablesOnly?: true;
   // -gline-directives-only
-  lineDirectivesOnly: true | undefined;
+  lineDirectivesOnly?: true;
 
   // -g<name>, -gno-<name>
-  splitDwarf: boolean | undefined;
-  columnInfo: boolean | undefined;
-  pubnames: boolean | undefined;
-  gnuPubnames: boolean | undefined;
-  strictDwarf: boolean | undefined;
-  recordGccSwitches: boolean | undefined;
-  recordCommandLine: boolean | undefined;
-  embedSource: boolean | undefined;
-  inlineLineTables: boolean | undefined;
-  statementFrontiers: boolean | undefined;
-  variableLocationViews: boolean | undefined;
-  asLocSupport: boolean | undefined;
-  simpleTemplateNames: boolean | undefined;
-  modules: boolean | undefined;
+  splitDwarf?: boolean;
+  columnInfo?: boolean;
+  pubnames?: boolean;
+  gnuPubnames?: boolean;
+  strictDwarf?: boolean;
+  recordGccSwitches?: boolean;
+  recordCommandLine?: boolean;
+  embedSource?: boolean;
+  inlineLineTables?: boolean;
+  statementFrontiers?: boolean;
+  variableLocationViews?: boolean;
+  asLocSupport?: boolean;
+  simpleTemplateNames?: boolean;
+  modules?: boolean;
 };
 
 type TCcCodeGenerationOptions = {
   // -fpic, -fPIC, -fno-pic
-  pic: "small" | "large" | false | undefined;
+  pic?: "small" | "large" | false;
   // -fpie, -fPIE, -fno-pie
-  pie: "small" | "large" | false | undefined;
+  pie?: "small" | "large" | false;
   // -fvisibility=<visibility>
-  visibility: "default" | "hidden" | "protected" | "internal" | undefined;
+  visibility?: "default" | "hidden" | "protected" | "internal";
   // -ftls-model=<model>
-  tlsModel: "global-dynamic" | "local-dynamic" | "initial-exec" | "local-exec" | undefined;
+  tlsModel?: "global-dynamic" | "local-dynamic" | "initial-exec" | "local-exec";
   // -flto, -flto=<mode>, -fno-lto
-  lto: boolean | string | undefined;
+  lto?: boolean | string;
   // -fstack-protector[-<kind>], -fno-stack-protector
-  stackProtector: "default" | "strong" | "all" | "explicit" | false | undefined;
+  stackProtector?: "default" | "strong" | "all" | "explicit" | false;
   // -fcf-protection[=<kind>]
-  controlFlowProtection: "full" | "branch" | "return" | "none" | "check" | undefined;
+  controlFlowProtection?: "full" | "branch" | "return" | "none" | "check";
   // -ftrivial-auto-var-init=<value>
-  trivialAutoVarInit: "uninitialized" | "zero" | "pattern" | undefined;
+  trivialAutoVarInit?: "uninitialized" | "zero" | "pattern";
   // -ffp-contract=<mode>
-  fpContract: "off" | "on" | "fast" | "fast-honor-pragmas" | undefined;
+  fpContract?: "off" | "on" | "fast" | "fast-honor-pragmas";
   // -ffp-model=<model>
-  fpModel: "precise" | "strict" | "fast" | undefined;
+  fpModel?: "precise" | "strict" | "fast";
   // -fexcess-precision=<style>
-  excessPrecision: "standard" | "fast" | "16" | undefined;
+  excessPrecision?: "standard" | "fast" | "16";
   // -fzero-call-used-regs=<choice>
-  zeroCallUsedRegs: string | undefined;
+  zeroCallUsedRegs?: string;
   // -fpatchable-function-entry=<n>[,<m>]
-  patchableFunctionEntry: string | undefined;
+  patchableFunctionEntry?: string;
   // -frandom-seed=<seed>
-  randomSeed: string | undefined;
+  randomSeed?: string;
   // -fstack-check[=<kind>], -fno-stack-check
-  stackCheck: boolean | string | undefined;
+  stackCheck?: boolean | string;
   // -fstrict-flex-arrays[=<level>]
-  strictFlexArrays: boolean | string | undefined;
+  strictFlexArrays?: boolean | string;
   // -falign-functions[=<n>]
-  alignFunctions: boolean | string | undefined;
+  alignFunctions?: boolean | string;
   // -falign-jumps[=<n>]
-  alignJumps: boolean | string | undefined;
+  alignJumps?: boolean | string;
   // -falign-loops[=<n>]
-  alignLoops: boolean | string | undefined;
+  alignLoops?: boolean | string;
   // -falign-labels[=<n>]
-  alignLabels: boolean | string | undefined;
+  alignLabels?: boolean | string;
   // -ffixed-<register>
-  fixedRegisters: readonly string[];
+  fixedRegisters?: readonly string[];
 
   // -f<name>, -fno-<name>
-  common: boolean | undefined;
-  strictAliasing: boolean | undefined;
-  strictOverflow: boolean | undefined;
-  wrapv: boolean | undefined;
-  trapv: boolean | undefined;
-  deleteNullPointerChecks: boolean | undefined;
-  omitFramePointer: boolean | undefined;
-  functionSections: boolean | undefined;
-  dataSections: boolean | undefined;
-  asynchronousUnwindTables: boolean | undefined;
-  unwindTables: boolean | undefined;
-  plt: boolean | undefined;
-  semanticInterposition: boolean | undefined;
-  stackClashProtection: boolean | undefined;
-  splitStack: boolean | undefined;
-  fastMath: boolean | undefined;
-  mathErrno: boolean | undefined;
-  finiteMathOnly: boolean | undefined;
-  trappingMath: boolean | undefined;
-  roundingMath: boolean | undefined;
-  signedZeros: boolean | undefined;
-  associativeMath: boolean | undefined;
-  reciprocalMath: boolean | undefined;
-  unsafeMathOptimizations: boolean | undefined;
-  inline: boolean | undefined;
-  inlineFunctions: boolean | undefined;
-  inlineSmallFunctions: boolean | undefined;
-  inlineFunctionsCalledOnce: boolean | undefined;
-  unrollLoops: boolean | undefined;
-  unrollAllLoops: boolean | undefined;
-  peelLoops: boolean | undefined;
-  vectorize: boolean | undefined;
-  slpVectorize: boolean | undefined;
-  treeVectorize: boolean | undefined;
-  treeLoopVectorize: boolean | undefined;
-  treeSlpVectorize: boolean | undefined;
-  treeLoopDistributePatterns: boolean | undefined;
-  jumpTables: boolean | undefined;
-  optimizeSiblingCalls: boolean | undefined;
-  toplevelReorder: boolean | undefined;
-  reorderFunctions: boolean | undefined;
-  reorderBlocks: boolean | undefined;
-  mergeConstants: boolean | undefined;
-  mergeAllConstants: boolean | undefined;
-  zeroInitializedInBss: boolean | undefined;
-  keepInlineFunctions: boolean | undefined;
-  keepStaticConsts: boolean | undefined;
-  ident: boolean | undefined;
-  dwarf2CfiAsm: boolean | undefined;
-  conserveStack: boolean | undefined;
-  stackUsage: boolean | undefined;
-  visibilityInlinesHidden: boolean | undefined;
-  fatLtoObjects: boolean | undefined;
-  useLinkerPlugin: boolean | undefined;
-  wholeProgram: boolean | undefined;
-  varTracking: boolean | undefined;
-  varTrackingAssignments: boolean | undefined;
-  ipaSra: boolean | undefined;
-  allowStoreDataRaces: boolean | undefined;
-  strictVolatileBitfields: boolean | undefined;
-  verboseAsm: boolean | undefined;
+  common?: boolean;
+  strictAliasing?: boolean;
+  strictOverflow?: boolean;
+  wrapv?: boolean;
+  trapv?: boolean;
+  deleteNullPointerChecks?: boolean;
+  omitFramePointer?: boolean;
+  functionSections?: boolean;
+  dataSections?: boolean;
+  asynchronousUnwindTables?: boolean;
+  unwindTables?: boolean;
+  plt?: boolean;
+  semanticInterposition?: boolean;
+  stackClashProtection?: boolean;
+  splitStack?: boolean;
+  fastMath?: boolean;
+  mathErrno?: boolean;
+  finiteMathOnly?: boolean;
+  trappingMath?: boolean;
+  roundingMath?: boolean;
+  signedZeros?: boolean;
+  associativeMath?: boolean;
+  reciprocalMath?: boolean;
+  unsafeMathOptimizations?: boolean;
+  inline?: boolean;
+  inlineFunctions?: boolean;
+  inlineSmallFunctions?: boolean;
+  inlineFunctionsCalledOnce?: boolean;
+  unrollLoops?: boolean;
+  unrollAllLoops?: boolean;
+  peelLoops?: boolean;
+  vectorize?: boolean;
+  slpVectorize?: boolean;
+  treeVectorize?: boolean;
+  treeLoopVectorize?: boolean;
+  treeSlpVectorize?: boolean;
+  treeLoopDistributePatterns?: boolean;
+  jumpTables?: boolean;
+  optimizeSiblingCalls?: boolean;
+  toplevelReorder?: boolean;
+  reorderFunctions?: boolean;
+  reorderBlocks?: boolean;
+  mergeConstants?: boolean;
+  mergeAllConstants?: boolean;
+  zeroInitializedInBss?: boolean;
+  keepInlineFunctions?: boolean;
+  keepStaticConsts?: boolean;
+  ident?: boolean;
+  dwarf2CfiAsm?: boolean;
+  conserveStack?: boolean;
+  stackUsage?: boolean;
+  visibilityInlinesHidden?: boolean;
+  fatLtoObjects?: boolean;
+  useLinkerPlugin?: boolean;
+  wholeProgram?: boolean;
+  varTracking?: boolean;
+  varTrackingAssignments?: boolean;
+  ipaSra?: boolean;
+  allowStoreDataRaces?: boolean;
+  strictVolatileBitfields?: boolean;
+  verboseAsm?: boolean;
 };
 
 type TCcInstrumentationOptions = {
   // --coverage
-  coverage: true | undefined;
+  coverage?: true;
   // -pg
-  gprof: true | undefined;
+  gprof?: true;
   // -p
-  prof: true | undefined;
+  prof?: true;
   // -fprofile-generate[=<path>], -fno-profile-generate
-  profileGenerate: boolean | string | undefined;
+  profileGenerate?: boolean | string;
   // -fprofile-use[=<path>], -fno-profile-use
-  profileUse: boolean | string | undefined;
+  profileUse?: boolean | string;
   // -fprofile-instr-generate[=<file>]
-  profileInstrGenerate: boolean | string | undefined;
+  profileInstrGenerate?: boolean | string;
   // -fprofile-instr-use[=<file>]
-  profileInstrUse: boolean | string | undefined;
+  profileInstrUse?: boolean | string;
   // -fprofile-update=<method>
-  profileUpdate: "single" | "atomic" | "prefer-atomic" | undefined;
+  profileUpdate?: "single" | "atomic" | "prefer-atomic";
   // -fsanitize=<names>, -fno-sanitize=<names>
-  sanitizers: readonly TCcSanitizerSetting[];
+  sanitizers?: readonly TCcSanitizerSetting[];
   // -fsanitize-recover[=<names>], -fno-sanitize-recover[=<names>]
-  sanitizerRecover: readonly TCcSanitizerSetting[];
+  sanitizerRecover?: readonly TCcSanitizerSetting[];
   // -fsanitize-trap[=<names>], -fno-sanitize-trap[=<names>]
-  sanitizerTrap: readonly TCcSanitizerSetting[];
+  sanitizerTrap?: readonly TCcSanitizerSetting[];
   // -fsanitize-coverage=<types>
-  sanitizerCoverage: readonly string[];
+  sanitizerCoverage?: readonly string[];
   // -fsanitize-ignorelist=<file>
-  sanitizerIgnoreLists: readonly string[];
+  sanitizerIgnoreLists?: readonly string[];
   // -fsanitize-blacklist=<file>
-  sanitizerBlacklists: readonly string[];
+  sanitizerBlacklists?: readonly string[];
 
   // -f<name>, -fno-<name>
-  profileArcs: boolean | undefined;
-  testCoverage: boolean | undefined;
-  coverageMapping: boolean | undefined;
-  instrumentFunctions: boolean | undefined;
+  profileArcs?: boolean;
+  testCoverage?: boolean;
+  coverageMapping?: boolean;
+  instrumentFunctions?: boolean;
 };
 
 type TCcDiagnosticsOptions = {
   // -fdiagnostics-color[=<when>], -fcolor-diagnostics and negations
-  color: boolean | "always" | "never" | "auto" | undefined;
+  color?: boolean | "always" | "never" | "auto";
   // -fdiagnostics-format=<format>
-  format: string | undefined;
+  format?: string;
   // -fmessage-length=<n>
-  messageLength: number | undefined;
+  messageLength?: number;
   // -fmax-errors=<n>
-  maxErrors: number | undefined;
+  maxErrors?: number;
   // -ferror-limit=<n>
-  errorLimit: number | undefined;
+  errorLimit?: number;
   // -serialize-diagnostics <file>
-  serializeFile: string | undefined;
+  serializeFile?: string;
 
   // -f<name>, -fno-<name>
-  showOption: boolean | undefined;
-  showCaret: boolean | undefined;
+  showOption?: boolean;
+  showCaret?: boolean;
 };
 
 type TCcWarningOptions = {
   // -w
-  suppressAll: true | undefined;
+  suppressAll?: true;
   // -pedantic-errors
-  pedanticErrors: true | undefined;
+  pedanticErrors?: true;
 
   // -W<name>, -Wno-<name>
-  error: boolean | undefined;
-  fatalErrors: boolean | undefined;
+  error?: boolean;
+  fatalErrors?: boolean;
 
   // -W<name>[=<value>], -Wno-<name>, -Werror=<name>, -Wno-error=<name>
-  all: TCcWarning | undefined;
+  all?: TCcWarning;
   // also -W
-  extra: TCcWarning | undefined;
+  extra?: TCcWarning;
   // also -pedantic
-  pedantic: TCcWarning | undefined;
-  everything: TCcWarning | undefined;
-  address: TCcWarning | undefined;
-  addressOfPackedMember: TCcWarning | undefined;
-  allocSizeLargerThan: TCcWarning | undefined;
-  alloca: TCcWarning | undefined;
-  arrayBounds: TCcWarning | undefined;
-  arrayParameter: TCcWarning | undefined;
-  attributes: TCcWarning | undefined;
-  badFunctionCast: TCcWarning | undefined;
-  boolConversion: TCcWarning | undefined;
-  builtinMacroRedefined: TCcWarning | undefined;
-  castAlign: TCcWarning | undefined;
-  castFunctionType: TCcWarning | undefined;
-  castQual: TCcWarning | undefined;
-  charSubscripts: TCcWarning | undefined;
-  comma: TCcWarning | undefined;
-  comment: TCcWarning | undefined;
-  conditionalUninitialized: TCcWarning | undefined;
-  constantConversion: TCcWarning | undefined;
-  conversion: TCcWarning | undefined;
-  danglingPointer: TCcWarning | undefined;
-  dateTime: TCcWarning | undefined;
-  declarationAfterStatement: TCcWarning | undefined;
-  deprecated: TCcWarning | undefined;
-  deprecatedDeclarations: TCcWarning | undefined;
-  deprecatedNonPrototype: TCcWarning | undefined;
-  designatedInit: TCcWarning | undefined;
-  documentation: TCcWarning | undefined;
-  doublePromotion: TCcWarning | undefined;
-  duplicatedBranches: TCcWarning | undefined;
-  duplicatedCond: TCcWarning | undefined;
-  emptyBody: TCcWarning | undefined;
-  enumConversion: TCcWarning | undefined;
-  extraSemi: TCcWarning | undefined;
-  floatConversion: TCcWarning | undefined;
-  floatEqual: TCcWarning | undefined;
-  format: TCcWarning | undefined;
-  formatNonliteral: TCcWarning | undefined;
-  formatOverflow: TCcWarning | undefined;
-  formatSecurity: TCcWarning | undefined;
-  formatSignedness: TCcWarning | undefined;
-  formatTruncation: TCcWarning | undefined;
-  frameAddress: TCcWarning | undefined;
-  frameLargerThan: TCcWarning | undefined;
-  freeNonheapObject: TCcWarning | undefined;
-  gnu: TCcWarning | undefined;
-  ignoredQualifiers: TCcWarning | undefined;
-  implicit: TCcWarning | undefined;
-  implicitFallthrough: TCcWarning | undefined;
-  implicitFunctionDeclaration: TCcWarning | undefined;
-  implicitInt: TCcWarning | undefined;
-  incompatibleFunctionPointerTypes: TCcWarning | undefined;
-  incompatiblePointerTypes: TCcWarning | undefined;
-  infiniteRecursion: TCcWarning | undefined;
-  initSelf: TCcWarning | undefined;
-  inline: TCcWarning | undefined;
-  intConversion: TCcWarning | undefined;
-  intToPointerCast: TCcWarning | undefined;
-  invalidPch: TCcWarning | undefined;
-  jumpMissesInit: TCcWarning | undefined;
-  logicalOp: TCcWarning | undefined;
-  longLong: TCcWarning | undefined;
-  main: TCcWarning | undefined;
-  maybeUninitialized: TCcWarning | undefined;
-  misleadingIndentation: TCcWarning | undefined;
-  missingBraces: TCcWarning | undefined;
-  missingDeclarations: TCcWarning | undefined;
-  missingFieldInitializers: TCcWarning | undefined;
-  missingFormatAttribute: TCcWarning | undefined;
-  missingIncludeDirs: TCcWarning | undefined;
-  missingNoreturn: TCcWarning | undefined;
-  missingProfile: TCcWarning | undefined;
-  missingPrototypes: TCcWarning | undefined;
-  missingVariableDeclarations: TCcWarning | undefined;
-  multichar: TCcWarning | undefined;
-  nestedExterns: TCcWarning | undefined;
-  newlineEof: TCcWarning | undefined;
-  nonLiteralNullConversion: TCcWarning | undefined;
-  nonVirtualDtor: TCcWarning | undefined;
-  nonnull: TCcWarning | undefined;
-  nullDereference: TCcWarning | undefined;
-  oldStyleCast: TCcWarning | undefined;
-  oldStyleDeclaration: TCcWarning | undefined;
-  oldStyleDefinition: TCcWarning | undefined;
-  overlengthStrings: TCcWarning | undefined;
-  overloadedVirtual: TCcWarning | undefined;
-  packed: TCcWarning | undefined;
-  packedNotAligned: TCcWarning | undefined;
-  padded: TCcWarning | undefined;
-  parentheses: TCcWarning | undefined;
-  pessimizingMove: TCcWarning | undefined;
-  pointerArith: TCcWarning | undefined;
-  pointerSign: TCcWarning | undefined;
-  redundantDecls: TCcWarning | undefined;
-  redundantMove: TCcWarning | undefined;
-  restrict: TCcWarning | undefined;
-  returnType: TCcWarning | undefined;
-  sequencePoint: TCcWarning | undefined;
-  shadow: TCcWarning | undefined;
-  shiftCountOverflow: TCcWarning | undefined;
-  shiftNegativeValue: TCcWarning | undefined;
-  shorten64To32: TCcWarning | undefined;
-  signCompare: TCcWarning | undefined;
-  signConversion: TCcWarning | undefined;
-  stackProtector: TCcWarning | undefined;
-  stackUsage: TCcWarning | undefined;
-  strictAliasing: TCcWarning | undefined;
-  strictOverflow: TCcWarning | undefined;
-  strictPrototypes: TCcWarning | undefined;
-  stringopOverflow: TCcWarning | undefined;
-  stringopOverread: TCcWarning | undefined;
-  stringopTruncation: TCcWarning | undefined;
-  suggestAttribute: TCcWarning | undefined;
-  suggestOverride: TCcWarning | undefined;
-  switch: TCcWarning | undefined;
-  switchDefault: TCcWarning | undefined;
-  switchEnum: TCcWarning | undefined;
-  systemHeaders: TCcWarning | undefined;
-  threadSafety: TCcWarning | undefined;
-  trampolines: TCcWarning | undefined;
-  trigraphs: TCcWarning | undefined;
-  typeLimits: TCcWarning | undefined;
-  undef: TCcWarning | undefined;
-  uninitialized: TCcWarning | undefined;
-  unknownPragmas: TCcWarning | undefined;
-  unknownWarningOption: TCcWarning | undefined;
-  unreachableCode: TCcWarning | undefined;
-  unused: TCcWarning | undefined;
-  unusedButSetParameter: TCcWarning | undefined;
-  unusedButSetVariable: TCcWarning | undefined;
-  unusedCommandLineArgument: TCcWarning | undefined;
-  unusedConstVariable: TCcWarning | undefined;
-  unusedFunction: TCcWarning | undefined;
-  unusedLabel: TCcWarning | undefined;
-  unusedLocalTypedefs: TCcWarning | undefined;
-  unusedMacros: TCcWarning | undefined;
-  unusedParameter: TCcWarning | undefined;
-  unusedResult: TCcWarning | undefined;
-  unusedValue: TCcWarning | undefined;
-  unusedVariable: TCcWarning | undefined;
-  useAfterFree: TCcWarning | undefined;
-  uselessCast: TCcWarning | undefined;
-  vla: TCcWarning | undefined;
-  vlaLargerThan: TCcWarning | undefined;
-  writeStrings: TCcWarning | undefined;
-  zeroAsNullPointerConstant: TCcWarning | undefined;
-  zeroLengthBounds: TCcWarning | undefined;
+  pedantic?: TCcWarning;
+  everything?: TCcWarning;
+  address?: TCcWarning;
+  addressOfPackedMember?: TCcWarning;
+  allocSizeLargerThan?: TCcWarning;
+  alloca?: TCcWarning;
+  arrayBounds?: TCcWarning;
+  arrayParameter?: TCcWarning;
+  attributes?: TCcWarning;
+  badFunctionCast?: TCcWarning;
+  boolConversion?: TCcWarning;
+  builtinMacroRedefined?: TCcWarning;
+  castAlign?: TCcWarning;
+  castFunctionType?: TCcWarning;
+  castQual?: TCcWarning;
+  charSubscripts?: TCcWarning;
+  comma?: TCcWarning;
+  comment?: TCcWarning;
+  conditionalUninitialized?: TCcWarning;
+  constantConversion?: TCcWarning;
+  conversion?: TCcWarning;
+  danglingPointer?: TCcWarning;
+  dateTime?: TCcWarning;
+  declarationAfterStatement?: TCcWarning;
+  deprecated?: TCcWarning;
+  deprecatedDeclarations?: TCcWarning;
+  deprecatedNonPrototype?: TCcWarning;
+  designatedInit?: TCcWarning;
+  documentation?: TCcWarning;
+  doublePromotion?: TCcWarning;
+  duplicatedBranches?: TCcWarning;
+  duplicatedCond?: TCcWarning;
+  emptyBody?: TCcWarning;
+  enumConversion?: TCcWarning;
+  extraSemi?: TCcWarning;
+  floatConversion?: TCcWarning;
+  floatEqual?: TCcWarning;
+  format?: TCcWarning;
+  formatNonliteral?: TCcWarning;
+  formatOverflow?: TCcWarning;
+  formatSecurity?: TCcWarning;
+  formatSignedness?: TCcWarning;
+  formatTruncation?: TCcWarning;
+  frameAddress?: TCcWarning;
+  frameLargerThan?: TCcWarning;
+  freeNonheapObject?: TCcWarning;
+  gnu?: TCcWarning;
+  ignoredQualifiers?: TCcWarning;
+  implicit?: TCcWarning;
+  implicitFallthrough?: TCcWarning;
+  implicitFunctionDeclaration?: TCcWarning;
+  implicitInt?: TCcWarning;
+  incompatibleFunctionPointerTypes?: TCcWarning;
+  incompatiblePointerTypes?: TCcWarning;
+  infiniteRecursion?: TCcWarning;
+  initSelf?: TCcWarning;
+  inline?: TCcWarning;
+  intConversion?: TCcWarning;
+  intToPointerCast?: TCcWarning;
+  invalidPch?: TCcWarning;
+  jumpMissesInit?: TCcWarning;
+  logicalOp?: TCcWarning;
+  longLong?: TCcWarning;
+  main?: TCcWarning;
+  maybeUninitialized?: TCcWarning;
+  misleadingIndentation?: TCcWarning;
+  missingBraces?: TCcWarning;
+  missingDeclarations?: TCcWarning;
+  missingFieldInitializers?: TCcWarning;
+  missingFormatAttribute?: TCcWarning;
+  missingIncludeDirs?: TCcWarning;
+  missingNoreturn?: TCcWarning;
+  missingProfile?: TCcWarning;
+  missingPrototypes?: TCcWarning;
+  missingVariableDeclarations?: TCcWarning;
+  multichar?: TCcWarning;
+  nestedExterns?: TCcWarning;
+  newlineEof?: TCcWarning;
+  nonLiteralNullConversion?: TCcWarning;
+  nonVirtualDtor?: TCcWarning;
+  nonnull?: TCcWarning;
+  nullDereference?: TCcWarning;
+  oldStyleCast?: TCcWarning;
+  oldStyleDeclaration?: TCcWarning;
+  oldStyleDefinition?: TCcWarning;
+  overlengthStrings?: TCcWarning;
+  overloadedVirtual?: TCcWarning;
+  packed?: TCcWarning;
+  packedNotAligned?: TCcWarning;
+  padded?: TCcWarning;
+  parentheses?: TCcWarning;
+  pessimizingMove?: TCcWarning;
+  pointerArith?: TCcWarning;
+  pointerSign?: TCcWarning;
+  redundantDecls?: TCcWarning;
+  redundantMove?: TCcWarning;
+  restrict?: TCcWarning;
+  returnType?: TCcWarning;
+  sequencePoint?: TCcWarning;
+  shadow?: TCcWarning;
+  shiftCountOverflow?: TCcWarning;
+  shiftNegativeValue?: TCcWarning;
+  shorten64To32?: TCcWarning;
+  signCompare?: TCcWarning;
+  signConversion?: TCcWarning;
+  stackProtector?: TCcWarning;
+  stackUsage?: TCcWarning;
+  strictAliasing?: TCcWarning;
+  strictOverflow?: TCcWarning;
+  strictPrototypes?: TCcWarning;
+  stringopOverflow?: TCcWarning;
+  stringopOverread?: TCcWarning;
+  stringopTruncation?: TCcWarning;
+  suggestAttribute?: TCcWarning;
+  suggestOverride?: TCcWarning;
+  switch?: TCcWarning;
+  switchDefault?: TCcWarning;
+  switchEnum?: TCcWarning;
+  systemHeaders?: TCcWarning;
+  threadSafety?: TCcWarning;
+  trampolines?: TCcWarning;
+  trigraphs?: TCcWarning;
+  typeLimits?: TCcWarning;
+  undef?: TCcWarning;
+  uninitialized?: TCcWarning;
+  unknownPragmas?: TCcWarning;
+  unknownWarningOption?: TCcWarning;
+  unreachableCode?: TCcWarning;
+  unused?: TCcWarning;
+  unusedButSetParameter?: TCcWarning;
+  unusedButSetVariable?: TCcWarning;
+  unusedCommandLineArgument?: TCcWarning;
+  unusedConstVariable?: TCcWarning;
+  unusedFunction?: TCcWarning;
+  unusedLabel?: TCcWarning;
+  unusedLocalTypedefs?: TCcWarning;
+  unusedMacros?: TCcWarning;
+  unusedParameter?: TCcWarning;
+  unusedResult?: TCcWarning;
+  unusedValue?: TCcWarning;
+  unusedVariable?: TCcWarning;
+  useAfterFree?: TCcWarning;
+  uselessCast?: TCcWarning;
+  vla?: TCcWarning;
+  vlaLargerThan?: TCcWarning;
+  writeStrings?: TCcWarning;
+  zeroAsNullPointerConstant?: TCcWarning;
+  zeroLengthBounds?: TCcWarning;
 };
 
 type TCcLinkerOptions = {
   // -shared
-  shared: true | undefined;
+  shared?: true;
   // -static
-  static: true | undefined;
+  static?: true;
   // -static-pie
-  staticPie: true | undefined;
+  staticPie?: true;
   // -r
-  relocatable: true | undefined;
+  relocatable?: true;
   // -rdynamic
-  rdynamic: true | undefined;
+  rdynamic?: true;
   // -s
-  strip: true | undefined;
+  strip?: true;
   // -static-libgcc
-  staticLibgcc: true | undefined;
+  staticLibgcc?: true;
   // -shared-libgcc
-  sharedLibgcc: true | undefined;
+  sharedLibgcc?: true;
   // -static-libstdc++
-  staticLibstdcxx: true | undefined;
+  staticLibstdcxx?: true;
   // -static-libsan
-  staticLibsan: true | undefined;
+  staticLibsan?: true;
   // -nostdlib
-  nostdlib: true | undefined;
+  nostdlib?: true;
   // -nostdlib++
-  nostdlibxx: true | undefined;
+  nostdlibxx?: true;
   // -nodefaultlibs
-  nodefaultlibs: true | undefined;
+  nodefaultlibs?: true;
   // -nostartfiles
-  nostartfiles: true | undefined;
+  nostartfiles?: true;
   // -nolibc
-  nolibc: true | undefined;
+  nolibc?: true;
   // -dynamiclib
-  dynamicLibrary: true | undefined;
+  dynamicLibrary?: true;
   // -bundle
-  bundle: true | undefined;
+  bundle?: true;
   // -headerpad_max_install_names
-  headerpadMaxInstallNames: true | undefined;
+  headerpadMaxInstallNames?: true;
   // -dead_strip
-  deadStrip: true | undefined;
+  deadStrip?: true;
   // -flat_namespace
-  flatNamespace: true | undefined;
+  flatNamespace?: true;
   // -e <symbol>, --entry=<symbol>
-  entryPoint: string | undefined;
+  entryPoint?: string;
   // -fuse-ld=<linker>
-  useLinker: string | undefined;
+  useLinker?: string;
   // --ld-path=<path>
-  linkerPath: string | undefined;
+  linkerPath?: string;
   // --rtlib=<library>, -rtlib=<library>
-  runtimeLibrary: "libgcc" | "compiler-rt" | "platform" | undefined;
+  runtimeLibrary?: "libgcc" | "compiler-rt" | "platform";
   // --unwindlib=<library>, -unwindlib=<library>
-  unwindLibrary: "libgcc" | "libunwind" | "platform" | "none" | undefined;
+  unwindLibrary?: "libgcc" | "libunwind" | "platform" | "none";
   // -bundle_loader <executable>
-  bundleLoader: string | undefined;
+  bundleLoader?: string;
   // -install_name <name>
-  installName: string | undefined;
+  installName?: string;
   // -compatibility_version <version>
-  compatibilityVersion: string | undefined;
+  compatibilityVersion?: string;
   // -current_version <version>
-  currentVersion: string | undefined;
+  currentVersion?: string;
   // -undefined <treatment>
-  undefinedSymbolTreatment: "error" | "warning" | "suppress" | "dynamic_lookup" | undefined;
+  undefinedSymbolTreatment?: "error" | "warning" | "suppress" | "dynamic_lookup";
   // -exported_symbols_list <file>
-  exportedSymbolsList: string | undefined;
+  exportedSymbolsList?: string;
   // -L<dir>
-  libraryDirectories: readonly string[];
+  libraryDirectories?: readonly string[];
   // -T <script>
-  scripts: readonly string[];
+  scripts?: readonly string[];
   // -u <symbol>
-  undefinedSymbols: readonly string[];
+  undefinedSymbols?: readonly string[];
   // -z <keyword>
-  keywords: readonly string[];
+  keywords?: readonly string[];
   // -rpath <dir>
-  rpaths: readonly string[];
+  rpaths?: readonly string[];
 
   // -<name>, -no-<name>
-  pie: boolean | undefined;
+  pie?: boolean;
 };
 
 // options that have no field of their own, keyed by the option up to the first "=" and holding the rest
@@ -984,24 +974,24 @@ type TCcUnknownOptions = Record<string, string>;
 type TCcOptions = {
   action: TCcAction;
   // -o <file>
-  outputFile: string | undefined;
-  inputs: readonly TCcInput[];
-  queries: readonly TCcQuery[];
-  optimization: TCcOptimizationLevel | undefined;
-  driver: TCcDriverOptions;
-  target: TCcTargetOptions;
-  language: TCcLanguageOptions;
-  machine: TCcMachineOptions;
-  preprocessor: TCcPreprocessorOptions;
-  dependencies: TCcDependencyOptions;
-  debug: TCcDebugOptions;
-  codeGeneration: TCcCodeGenerationOptions;
-  instrumentation: TCcInstrumentationOptions;
-  diagnostics: TCcDiagnosticsOptions;
-  warnings: TCcWarningOptions;
-  linker: TCcLinkerOptions;
-  prefixMaps: readonly TCcPrefixMap[];
-  unknownOptions: TCcUnknownOptions;
+  outputFile?: string;
+  inputs?: readonly TCcInput[];
+  queries?: readonly TCcQuery[];
+  optimization?: TCcOptimizationLevel;
+  driver?: TCcDriverOptions;
+  target?: TCcTargetOptions;
+  language?: TCcLanguageOptions;
+  machine?: TCcMachineOptions;
+  preprocessor?: TCcPreprocessorOptions;
+  dependencies?: TCcDependencyOptions;
+  debug?: TCcDebugOptions;
+  codeGeneration?: TCcCodeGenerationOptions;
+  instrumentation?: TCcInstrumentationOptions;
+  diagnostics?: TCcDiagnosticsOptions;
+  warnings?: TCcWarningOptions;
+  linker?: TCcLinkerOptions;
+  prefixMaps?: readonly TCcPrefixMap[];
+  unknownOptions?: TCcUnknownOptions;
 };
 
 type TCcOptionGroupName =
@@ -1018,254 +1008,9 @@ type TCcOptionGroupName =
   | "warnings"
   | "linker";
 
-// every field of a table, set to undefined
-const undefinedFields = <TField extends string>({ fields }: { fields: { readonly [field in TField]: unknown } }) => {
-  return Object.fromEntries(Object.keys(fields).map((field) => {
-    return [field, undefined];
-  })) as { [field in TField]: undefined };
-};
-
 // options of an empty command line
 const defaultOptions: TCcOptions = {
   action: "link",
-  outputFile: undefined,
-  inputs: [],
-  queries: [],
-  optimization: undefined,
-  driver: {
-    verbose: undefined,
-    dryRun: undefined,
-    pipe: undefined,
-    pthread: undefined,
-    emitLlvm: undefined,
-    noCanonicalPrefixes: undefined,
-    suppressUnusedArgumentWarnings: undefined,
-    integratedAssembler: undefined,
-    saveTemps: undefined,
-    workingDirectory: undefined,
-    compilationDatabaseFile: undefined,
-    indexStorePath: undefined,
-    toolchainPrefixes: [],
-    specs: [],
-    plugins: [],
-    clangArguments: [],
-    llvmArguments: [],
-    assemblerArguments: [],
-    preprocessorArguments: [],
-    parameters: [],
-    architectureArguments: [],
-  },
-  target: {
-    triple: undefined,
-    sysroot: undefined,
-    headerSysroot: undefined,
-    gccToolchain: undefined,
-    resourceDirectory: undefined,
-    architectures: [],
-    appleDeploymentTarget: undefined,
-  },
-  language: {
-    ...undefinedFields({ fields: languageToggles.names }),
-    standard: undefined,
-    ansi: undefined,
-    cxxStandardLibrary: undefined,
-    charSignedness: undefined,
-    environment: undefined,
-    openmp: undefined,
-    inputCharset: undefined,
-    execCharset: undefined,
-    wideExecCharset: undefined,
-    templateDepth: undefined,
-    constexprDepth: undefined,
-    disabledBuiltins: [],
-    moduleName: undefined,
-    modulesCachePath: undefined,
-    moduleMapFiles: [],
-    moduleFiles: [],
-    prebuiltModulePaths: [],
-  },
-  machine: {
-    ...undefinedFields({ fields: machineToggles.names }),
-    architecture: undefined,
-    tune: undefined,
-    cpu: undefined,
-    fpu: undefined,
-    abi: undefined,
-    codeModel: undefined,
-    floatAbi: undefined,
-    branchProtection: undefined,
-    indirectBranch: undefined,
-    functionReturn: undefined,
-    tlsDialect: undefined,
-    fpmath: undefined,
-    asmDialect: undefined,
-    stackProtectorGuard: undefined,
-    stackProtectorGuardRegister: undefined,
-    stackProtectorGuardOffset: undefined,
-    preferredStackBoundary: undefined,
-    incomingStackBoundary: undefined,
-    regparm: undefined,
-    smallDataThreshold: undefined,
-    wordSize: undefined,
-    instructionSet: undefined,
-    endianness: undefined,
-    floatingPoint: undefined,
-    subsystem: undefined,
-  },
-  preprocessor: {
-    macros: [],
-    includeDirectories: [],
-    quoteIncludeDirectories: [],
-    systemIncludeDirectories: [],
-    afterIncludeDirectories: [],
-    frameworkDirectories: [],
-    systemFrameworkDirectories: [],
-    includePrefix: undefined,
-    prefixedIncludeDirectories: [],
-    prefixedBeforeIncludeDirectories: [],
-    multilib: undefined,
-    includeFiles: [],
-    macroFiles: [],
-    precompiledHeader: undefined,
-    vfsOverlays: [],
-    assertions: [],
-    nostdinc: undefined,
-    nostdincxx: undefined,
-    undef: undefined,
-    noLineMarkers: undefined,
-    printIncludes: undefined,
-    traditional: undefined,
-    traditionalCpp: undefined,
-    trigraphs: undefined,
-    includeDump: undefined,
-    comments: undefined,
-    macroDump: undefined,
-    directivesOnly: undefined,
-    preprocessed: undefined,
-    workingDirectory: undefined,
-  },
-  dependencies: {
-    generate: undefined,
-    includeSystemHeaderFiles: undefined,
-    file: undefined,
-    filename: undefined,
-    targets: [],
-    includeMissing: undefined,
-    missingHeadersAreGenerated: undefined,
-  },
-  debug: {
-    ...undefinedFields({ fields: debugToggles.names }),
-    enable: undefined,
-    level: undefined,
-    format: undefined,
-    dwarfVersion: undefined,
-    dwarfFormat: undefined,
-    compression: undefined,
-    lineTablesOnly: undefined,
-    lineDirectivesOnly: undefined,
-  },
-  codeGeneration: {
-    ...undefinedFields({ fields: codeGenerationToggles.names }),
-    pic: undefined,
-    pie: undefined,
-    visibility: undefined,
-    tlsModel: undefined,
-    lto: undefined,
-    stackProtector: undefined,
-    controlFlowProtection: undefined,
-    trivialAutoVarInit: undefined,
-    fpContract: undefined,
-    fpModel: undefined,
-    excessPrecision: undefined,
-    zeroCallUsedRegs: undefined,
-    patchableFunctionEntry: undefined,
-    randomSeed: undefined,
-    stackCheck: undefined,
-    strictFlexArrays: undefined,
-    alignFunctions: undefined,
-    alignJumps: undefined,
-    alignLoops: undefined,
-    alignLabels: undefined,
-    fixedRegisters: [],
-  },
-  instrumentation: {
-    coverage: undefined,
-    gprof: undefined,
-    prof: undefined,
-    profileGenerate: undefined,
-    profileUse: undefined,
-    profileInstrGenerate: undefined,
-    profileInstrUse: undefined,
-    profileUpdate: undefined,
-    sanitizers: [],
-    sanitizerRecover: [],
-    sanitizerTrap: [],
-    sanitizerCoverage: [],
-    sanitizerIgnoreLists: [],
-    sanitizerBlacklists: [],
-    profileArcs: undefined,
-    testCoverage: undefined,
-    coverageMapping: undefined,
-    instrumentFunctions: undefined,
-  },
-  diagnostics: {
-    color: undefined,
-    format: undefined,
-    messageLength: undefined,
-    maxErrors: undefined,
-    errorLimit: undefined,
-    serializeFile: undefined,
-    showOption: undefined,
-    showCaret: undefined,
-  },
-  warnings: {
-    ...undefinedFields({ fields: namedWarnings }),
-    suppressAll: undefined,
-    pedanticErrors: undefined,
-    error: undefined,
-    fatalErrors: undefined,
-  },
-  linker: {
-    ...undefinedFields({ fields: linkerToggles.names }),
-    shared: undefined,
-    static: undefined,
-    staticPie: undefined,
-    relocatable: undefined,
-    rdynamic: undefined,
-    strip: undefined,
-    staticLibgcc: undefined,
-    sharedLibgcc: undefined,
-    staticLibstdcxx: undefined,
-    staticLibsan: undefined,
-    nostdlib: undefined,
-    nostdlibxx: undefined,
-    nodefaultlibs: undefined,
-    nostartfiles: undefined,
-    nolibc: undefined,
-    dynamicLibrary: undefined,
-    bundle: undefined,
-    headerpadMaxInstallNames: undefined,
-    deadStrip: undefined,
-    flatNamespace: undefined,
-    entryPoint: undefined,
-    useLinker: undefined,
-    linkerPath: undefined,
-    runtimeLibrary: undefined,
-    unwindLibrary: undefined,
-    bundleLoader: undefined,
-    installName: undefined,
-    compatibilityVersion: undefined,
-    currentVersion: undefined,
-    undefinedSymbolTreatment: undefined,
-    exportedSymbolsList: undefined,
-    libraryDirectories: [],
-    scripts: [],
-    undefinedSymbols: [],
-    keywords: [],
-    rpaths: [],
-  },
-  prefixMaps: [],
-  unknownOptions: {},
 };
 
 export {

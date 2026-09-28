@@ -5,12 +5,12 @@ import type {
   TCcOptions
 } from "./options.ts";
 
-// the options of an empty command line with one field of a group changed
+// the options of an empty command line with one field of a group set
 const withField = ({ group, field, value }: { group: TCcOptionGroupName; field: string; value: unknown }) => {
-  return { ...defaultOptions, [group]: { ...defaultOptions[group], [field]: value } } as TCcOptions;
+  return { ...defaultOptions, [group]: { [field]: value } } as TCcOptions;
 };
 
-// the options of an empty command line with some fields of a group changed
+// the options of an empty command line with some fields of a group set
 const withGroup = <TGroupName extends TCcOptionGroupName>({
   group,
   values
@@ -18,7 +18,7 @@ const withGroup = <TGroupName extends TCcOptionGroupName>({
   group: TGroupName;
   values: Partial<TCcOptions[TGroupName]>;
 }): TCcOptions => {
-  return { ...defaultOptions, [group]: { ...defaultOptions[group], ...values } };
+  return { ...defaultOptions, [group]: values };
 };
 
 // the arguments giving an option a value

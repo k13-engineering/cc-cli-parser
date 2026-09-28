@@ -79,7 +79,7 @@ const setField = ({ state, group, field, value }: { state: TParseState; group: T
 };
 
 const readField = ({ state, group, field }: { state: TParseState; group: TCcOptionGroupName; field: string }) => {
-  const values: Readonly<Record<string, unknown>> = state.options[group];
+  const values: Readonly<Record<string, unknown>> = state.options[group] ?? {};
 
   return values[field];
 };
@@ -95,7 +95,7 @@ const appendToField = ({
   field: string;
   values: readonly unknown[];
 }) => {
-  const previousValues = readField({ state, group, field }) as readonly unknown[];
+  const previousValues = readField({ state, group, field }) as readonly unknown[] | undefined ?? [];
 
   return setField({ state, group, field, value: [...previousValues, ...values] });
 };
@@ -163,7 +163,7 @@ const unknownOptionEntry = ({ arg }: { arg: string }) => {
 // a repeated option moves to the end, so that the last one given still wins when formatted
 const addUnknownOption = ({ state, arg }: { state: TParseState; arg: string }) => {
   const { key, value } = unknownOptionEntry({ arg });
-  const { [key]: previousValue, ...otherUnknownOptions } = state.options.unknownOptions;
+  const { [key]: previousValue, ...otherUnknownOptions } = state.options.unknownOptions ?? {};
 
   return withOptions({ state, options: { ...state.options, unknownOptions: { ...otherUnknownOptions, [key]: value } } });
 };
@@ -316,7 +316,7 @@ const actionSpecs = Object.entries(actionOptions).map(([action, option]) => {
 });
 
 const addInput = ({ state, input }: { state: TParseState; input: TCcInput }) => {
-  return withOptions({ state, options: { ...state.options, inputs: [...state.options.inputs, input] } });
+  return withOptions({ state, options: { ...state.options, inputs: [...state.options.inputs ?? [], input] } });
 };
 
 const setLanguage: TValueHandler = ({ state, value }) => {
@@ -372,7 +372,7 @@ const inputSpecs: readonly TOptionSpec[] = [
 ];
 
 const addQuery = ({ state, query }: { state: TParseState; query: TCcQuery }) => {
-  return withOptions({ state, options: { ...state.options, queries: [...state.options.queries, query] } });
+  return withOptions({ state, options: { ...state.options, queries: [...state.options.queries ?? [], query] } });
 };
 
 const querySpecs: readonly TOptionSpec[] = [
@@ -425,7 +425,7 @@ const prefixMapSpecs = Object.entries(prefixMapOptions).map(([kind, option]): TO
       const { left, right } = splitAssignment({ option, value });
       const prefixMap = { kind: kind as TCcPrefixMapKind, from: left, to: right };
 
-      return withOptions({ state, options: { ...state.options, prefixMaps: [...state.options.prefixMaps, prefixMap] } });
+      return withOptions({ state, options: { ...state.options, prefixMaps: [...state.options.prefixMaps ?? [], prefixMap] } });
     },
   };
 });
@@ -434,14 +434,14 @@ const parseDefinition = ({ definition }: { definition: string }): TCcMacro => {
   const separatorIndex = definition.indexOf("=");
 
   if (separatorIndex < 0) {
-    return { kind: "define", name: definition, value: undefined };
+    return { kind: "define", name: definition };
   }
 
   return { kind: "define", name: definition.slice(0, separatorIndex), value: definition.slice(separatorIndex + 1) };
 };
 
 const addMacro = ({ state, macro }: { state: TParseState; macro: TCcMacro }) => {
-  return updateGroup({ state, group: "preprocessor", values: { macros: [...state.options.preprocessor.macros, macro] } });
+  return appendToField({ state, group: "preprocessor", field: "macros", values: [macro] });
 };
 
 const macroSpecs: readonly TOptionSpec[] = [
@@ -537,12 +537,12 @@ const generateDependencies = ({ includeSystemHeaderFiles, file, preprocess }: {
 }): TFlagHandler => {
   return ({ state }) => {
     const stateWithAction = preprocess ? withAction({ state, action: "preprocess" }) : state;
-    const { file: previousFile } = state.options.dependencies;
+    const fileValues = file === undefined ? {} : { file };
 
     return updateGroup({
       state: stateWithAction,
       group: "dependencies",
-      values: { generate: true, includeSystemHeaderFiles, file: file ?? previousFile },
+      values: { generate: true, includeSystemHeaderFiles, ...fileValues },
     });
   };
 };
@@ -650,7 +650,7 @@ const sanitizerSpecs: readonly TOptionSpec[] = [
 
 const updateWarning = ({ state, field, change }: { state: TParseState; field: string; change: Partial<TCcWarning> }) => {
   const warning = readField({ state, group: "warnings", field }) as TCcWarning | undefined;
-  const updatedWarning: TCcWarning = { enabled: undefined, error: undefined, value: undefined, ...warning, ...change };
+  const updatedWarning: TCcWarning = { ...warning, ...change };
 
   return setField({ state, group: "warnings", field, value: updatedWarning });
 };
@@ -730,7 +730,9 @@ const parseOperand = ({ state, arg }: { state: TParseState; arg: string }) => {
     return addInput({ state, input: { kind: "response-file", path: arg.slice("@".length) } });
   }
 
-  return addInput({ state, input: { kind: "file", path: arg, language: state.language } });
+  const languageValues = state.language === undefined ? {} : { language: state.language };
+
+  return addInput({ state, input: { kind: "file", path: arg, ...languageValues } });
 };
 
 const parsePrefixedOption = ({ state, arg }: { state: TParseState; arg: string }) => {

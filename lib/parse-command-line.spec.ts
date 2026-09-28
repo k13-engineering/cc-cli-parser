@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "mocha";
 import { groupDescriptors, namedWarnings } from "./option-descriptors.ts";
 import { defaultOptions } from "./options.ts";
+import { groupFields } from "./option-fields.spec.ts";
 import { optionSpecs, parseCommandLine } from "./parse-command-line.ts";
 import {
   argsFor,
@@ -39,24 +40,24 @@ describe("parseCommandLine", () => {
 
     it("should collect input files with the language of the last -x", () => {
       assert.deepEqual(parseLine({ line: "a.c -x c++ b.cc -xc c.h -x none d.c" }).inputs, [
-        { kind: "file", path: "a.c", language: undefined },
+        { kind: "file", path: "a.c" },
         { kind: "file", path: "b.cc", language: "c++" },
         { kind: "file", path: "c.h", language: "c" },
-        { kind: "file", path: "d.c", language: undefined },
+        { kind: "file", path: "d.c" },
       ]);
     });
 
     it("should read - as standard input and keep response files", () => {
       assert.deepEqual(parseLine({ line: "- @args.rsp" }).inputs, [
-        { kind: "file", path: "-", language: undefined },
+        { kind: "file", path: "-" },
         { kind: "response-file", path: "args.rsp" },
       ]);
     });
 
     it("should treat arguments named like object properties as input files", () => {
       assert.deepEqual(parseLine({ line: "toString constructor" }).inputs, [
-        { kind: "file", path: "toString", language: undefined },
-        { kind: "file", path: "constructor", language: undefined },
+        { kind: "file", path: "toString" },
+        { kind: "file", path: "constructor" },
       ]);
     });
 
@@ -259,14 +260,14 @@ describe("parseCommandLine", () => {
     });
 
     it("should append to lists in order", () => {
-      assert.deepEqual(parseLine({ line: "-Ib -Ia -Ib" }).preprocessor.includeDirectories, ["b", "a", "b"]);
+      assert.deepEqual(parseLine({ line: "-Ib -Ia -Ib" }).preprocessor?.includeDirectories, ["b", "a", "b"]);
     });
   });
 
   describe("preprocessor", () => {
     it("should parse macro definitions in order", () => {
-      assert.deepEqual(parseLine({ line: "-DA -D B=1 -DC= -DD=e=f -UA" }).preprocessor.macros, [
-        { kind: "define", name: "A", value: undefined },
+      assert.deepEqual(parseLine({ line: "-DA -D B=1 -DC= -DD=e=f -UA" }).preprocessor?.macros, [
+        { kind: "define", name: "A" },
         { kind: "define", name: "B", value: "1" },
         { kind: "define", name: "C", value: "" },
         { kind: "define", name: "D", value: "e=f" },
@@ -307,7 +308,6 @@ describe("parseCommandLine", () => {
 
     it("should keep writing to the file given by -MF", () => {
       assert.deepEqual(parseLine({ line: "-MF a.d -M" }).dependencies, {
-        ...defaultOptions.dependencies,
         generate: true,
         includeSystemHeaderFiles: true,
         file: true,
@@ -316,7 +316,7 @@ describe("parseCommandLine", () => {
     });
 
     it("should parse targets in order", () => {
-      assert.deepEqual(parseLine({ line: "-MT a.o -MQb.o" }).dependencies.targets, [
+      assert.deepEqual(parseLine({ line: "-MT a.o -MQb.o" }).dependencies?.targets, [
         { name: "a.o", quoted: false },
         { name: "b.o", quoted: true },
       ]);
@@ -362,7 +362,7 @@ describe("parseCommandLine", () => {
 
   describe("driver and target", () => {
     it("should parse parameters", () => {
-      assert.deepEqual(parseLine({ line: "--param max-inline-insns=10 --param=a=b=c" }).driver.parameters, [
+      assert.deepEqual(parseLine({ line: "--param max-inline-insns=10 --param=a=b=c" }).driver?.parameters, [
         { name: "max-inline-insns", value: "10" },
         { name: "a", value: "b=c" },
       ]);
@@ -377,7 +377,7 @@ describe("parseCommandLine", () => {
     it("should parse arguments for single architectures", () => {
       assert.deepEqual(parseLine({ line: "-Xarch_x86_64 -msse4.2 a.c" }), {
         ...withGroup({ group: "driver", values: { architectureArguments: [{ architecture: "x86_64", argument: "-msse4.2" }] } }),
-        inputs: [{ kind: "file", path: "a.c", language: undefined }],
+        inputs: [{ kind: "file", path: "a.c" }],
       });
     });
 
@@ -399,10 +399,10 @@ describe("parseCommandLine", () => {
       assert.deepEqual(parseLine({ line: "-Wshadow -Wno-unused -Werror=switch -Wno-error=shadow -Wformat=2" }), withGroup({
         group: "warnings",
         values: {
-          shadow: { enabled: true, error: false, value: undefined },
-          unused: { enabled: false, error: undefined, value: undefined },
-          switch: { enabled: undefined, error: true, value: undefined },
-          format: { enabled: true, error: undefined, value: "2" },
+          shadow: { enabled: true, error: false },
+          unused: { enabled: false },
+          switch: { error: true },
+          format: { enabled: true, value: "2" },
         },
       }));
     });
@@ -411,8 +411,8 @@ describe("parseCommandLine", () => {
       assert.deepEqual(parseLine({ line: "-W -pedantic" }), withGroup({
         group: "warnings",
         values: {
-          extra: { enabled: true, error: undefined, value: undefined },
-          pedantic: { enabled: true, error: undefined, value: undefined },
+          extra: { enabled: true },
+          pedantic: { enabled: true },
         },
       }));
     });
@@ -442,7 +442,7 @@ describe("parseCommandLine", () => {
     });
 
     it("should move a repeated option to the end", () => {
-      assert.deepEqual(Object.keys(parseLine({ line: "-fa -fb -fa" }).unknownOptions), ["-fb", "-fa"]);
+      assert.deepEqual(Object.keys(parseLine({ line: "-fa -fb -fa" }).unknownOptions ?? {}), ["-fb", "-fa"]);
     });
   });
 
@@ -502,7 +502,7 @@ describe("parseCommandLine", () => {
           ...customFields[group],
         ];
 
-        assert.deepEqual(describedFields.toSorted(), Object.keys(defaultOptions[group]).toSorted(), group);
+        assert.deepEqual(describedFields.toSorted(), Object.keys(groupFields[group]).toSorted(), group);
       });
     });
   });

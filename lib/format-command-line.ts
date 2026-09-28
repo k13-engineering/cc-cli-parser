@@ -13,12 +13,14 @@ import type {
   TOptionSyntax
 } from "./option-descriptors.ts";
 import type {
+  TCcArchitectureArgument,
   TCcDependencyOptions,
   TCcInput,
   TCcLanguage,
   TCcMacro,
   TCcOptionGroupName,
   TCcOptions,
+  TCcParameter,
   TCcQuery,
   TCcSanitizerSetting,
   TCcWarning
@@ -49,10 +51,10 @@ const formatToggle = ({ prefix, name, value }: { prefix: string; name: string; v
 };
 
 // -W<tool>,<arguments>, unless an argument contains a comma, which needs -X<tool> <argument>
-const formatPassThrough = ({ joinedOption, separateOption, args }: {
+const formatPassThrough = ({ joinedOption, separateOption, args = [] }: {
   joinedOption: string;
   separateOption: string;
-  args: readonly string[];
+  args: readonly string[] | undefined;
 }) => {
   if (args.length === 0) {
     return [];
@@ -133,14 +135,16 @@ const formatToggles = ({ descriptor, values }: { descriptor: TAnyGroupDescriptor
 
 const formatLists = ({ descriptor, values }: { descriptor: TAnyGroupDescriptor; values: TGroupValues }) => {
   return descriptor.lists.flatMap(({ field, option, syntax }) => {
-    return (values[field] as readonly string[]).flatMap((value) => {
+    const fieldValues = values[field] as readonly string[] | undefined ?? [];
+
+    return fieldValues.flatMap((value) => {
       return spell({ option, syntax, value });
     });
   });
 };
 
 const formatGroup = ({ options, descriptor }: { options: TCcOptions; descriptor: TAnyGroupDescriptor }) => {
-  const values: TGroupValues = options[descriptor.group];
+  const values: TGroupValues = options[descriptor.group] ?? {};
 
   return [
     ...formatFlagsAndChoices({ descriptor, values }),
@@ -163,7 +167,7 @@ const formatQuery = ({ query }: { query: TCcQuery }) => {
 };
 
 const formatQueries: TFormatter = ({ options }) => {
-  return options.queries.map((query) => {
+  return (options.queries ?? []).map((query) => {
     return formatQuery({ query });
   });
 };
@@ -178,23 +182,35 @@ const formatOptimization: TFormatter = ({ options }) => {
   return [typeof optimization === "number" ? `-O${optimization}` : namedOptimizationLevels[optimization]];
 };
 
+const formatParameters = ({ parameters = [] }: { parameters: readonly TCcParameter[] | undefined }) => {
+  return parameters.flatMap(({ name, value }) => {
+    return ["--param", `${name}=${value}`];
+  });
+};
+
+const formatArchitectureArguments = ({
+  architectureArguments = []
+}: {
+  architectureArguments: readonly TCcArchitectureArgument[] | undefined
+}) => {
+  return architectureArguments.flatMap(({ architecture, argument }) => {
+    return [`-Xarch_${architecture}`, argument];
+  });
+};
+
 const formatDriverExtras: TFormatter = ({ options }) => {
-  const { driver } = options;
+  const { driver = {} } = options;
 
   return [
     ...formatPassThrough({ joinedOption: "-Wa,", separateOption: "-Xassembler", args: driver.assemblerArguments }),
     ...formatPassThrough({ joinedOption: "-Wp,", separateOption: "-Xpreprocessor", args: driver.preprocessorArguments }),
-    ...driver.parameters.flatMap(({ name, value }) => {
-      return ["--param", `${name}=${value}`];
-    }),
-    ...driver.architectureArguments.flatMap(({ architecture, argument }) => {
-      return [`-Xarch_${architecture}`, argument];
-    }),
+    ...formatParameters({ parameters: driver.parameters }),
+    ...formatArchitectureArguments({ architectureArguments: driver.architectureArguments }),
   ];
 };
 
 const formatAppleDeploymentTarget: TFormatter = ({ options }) => {
-  const { appleDeploymentTarget } = options.target;
+  const appleDeploymentTarget = options.target?.appleDeploymentTarget;
 
   if (appleDeploymentTarget === undefined) {
     return [];
@@ -204,7 +220,7 @@ const formatAppleDeploymentTarget: TFormatter = ({ options }) => {
 };
 
 const formatDebugLevel: TFormatter = ({ options }) => {
-  const { level } = options.debug;
+  const level = options.debug?.level;
 
   return level === undefined ? [] : [`-g${level}`];
 };
@@ -223,16 +239,17 @@ const groupSettings = ({ settings }: { settings: readonly TCcSanitizerSetting[] 
 };
 
 const formatSanitizers: TFormatter = ({ options }) => {
-  const { instrumentation } = options;
+  const instrumentation = options.instrumentation ?? {};
   const sanitizerArgs = Object.entries(sanitizerOptions).flatMap(([field, { enabled, disabled }]) => {
-    const settings = instrumentation[field as keyof typeof sanitizerOptions];
+    const settings = instrumentation[field as keyof typeof sanitizerOptions] ?? [];
 
     return groupSettings({ settings }).map((run) => {
       return `${run.enabled ? enabled : disabled}${run.names.join(",")}`;
     });
   });
-  const coverageArgs = instrumentation.sanitizerCoverage.length === 0 ? [] : [
-    `-fsanitize-coverage=${instrumentation.sanitizerCoverage.join(",")}`,
+  const sanitizerCoverage = instrumentation.sanitizerCoverage ?? [];
+  const coverageArgs = sanitizerCoverage.length === 0 ? [] : [
+    `-fsanitize-coverage=${sanitizerCoverage.join(",")}`,
   ];
 
   return [...sanitizerArgs, ...coverageArgs];
@@ -251,7 +268,7 @@ const formatWarning = ({ name, warning }: { name: string; warning: TCcWarning })
 };
 
 const formatNamedWarnings: TFormatter = ({ options }) => {
-  const values: TGroupValues = options.warnings;
+  const values: TGroupValues = options.warnings ?? {};
 
   return Object.entries(namedWarnings).flatMap(([field, name]) => {
     const warning = values[field] as TCcWarning | undefined;
@@ -269,7 +286,7 @@ const formatMacro = ({ macro }: { macro: TCcMacro }) => {
 };
 
 const formatMacros: TFormatter = ({ options }) => {
-  return options.preprocessor.macros.map((macro) => {
+  return (options.preprocessor?.macros ?? []).map((macro) => {
     return formatMacro({ macro });
   });
 };
@@ -312,11 +329,11 @@ const formatDependencyFilename = ({ dependencies }: { dependencies: TCcDependenc
 };
 
 const formatDependencies: TFormatter = ({ options }) => {
-  const { action, dependencies } = options;
+  const { action, dependencies = {} } = options;
 
   return [
     ...formatDependencyGeneration({ action, dependencies }),
-    ...dependencies.targets.flatMap(({ name, quoted }) => {
+    ...(dependencies.targets ?? []).flatMap(({ name, quoted }) => {
       return [quoted ? "-MQ" : "-MT", name];
     }),
     ...formatDependencyFilename({ dependencies }),
@@ -324,13 +341,13 @@ const formatDependencies: TFormatter = ({ options }) => {
 };
 
 const formatPrefixMaps: TFormatter = ({ options }) => {
-  return options.prefixMaps.map(({ kind, from, to }) => {
+  return (options.prefixMaps ?? []).map(({ kind, from, to }) => {
     return `${prefixMapOptions[kind]}${from}=${to}`;
   });
 };
 
 const formatUnknownOptions: TFormatter = ({ options }) => {
-  return Object.entries(options.unknownOptions).map(([option, value]) => {
+  return Object.entries(options.unknownOptions ?? {}).map(([option, value]) => {
     return value === "" ? option : `${option}=${value}`;
   });
 };
@@ -371,7 +388,7 @@ const formatInput = ({ input }: { input: Exclude<TCcInput, { kind: "file" }> }) 
 const formatInputs: TFormatter = ({ options }) => {
   const initialState: { args: readonly string[]; language: TCcLanguage | undefined } = { args: [], language: undefined };
 
-  return options.inputs.reduce((state, input) => {
+  return (options.inputs ?? []).reduce((state, input) => {
     if (input.kind !== "file") {
       return { ...state, args: [...state.args, ...formatInput({ input })] };
     }

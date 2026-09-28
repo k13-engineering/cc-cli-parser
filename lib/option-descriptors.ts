@@ -59,7 +59,7 @@ type TEnumDescriptor<TGroup> = {
 }[TEnumFields<TGroup>];
 
 type TChoiceDescriptor<TGroup> = {
-  [field in keyof TGroup]: {
+  [field in keyof TGroup]-?: {
     field: field;
     // options setting the field to a value, the first one of a value is written
     choices: readonly { option: string; value: TGroup[field] }[];
@@ -83,17 +83,20 @@ type TToggleDescriptor<TGroup> = {
   names: { readonly [field in TFieldsOfType<TGroup, boolean | undefined>]: string };
 };
 
+// the fields of an option group
+type TGroupFields<TGroupName extends TCcOptionGroupName> = NonNullable<TCcOptions[TGroupName]>;
+
 // how the fields of an option group are spelled, except for the ones handled on their own
-type TGroupDescriptor<TGroupName extends TCcOptionGroupName, TCustomField extends keyof TCcOptions[TGroupName] = never> = {
+type TGroupDescriptor<TGroupName extends TCcOptionGroupName, TCustomField extends keyof TGroupFields<TGroupName> = never> = {
   group: TGroupName;
-  flags: { readonly [field in TFieldsOfType<Omit<TCcOptions[TGroupName], TCustomField>, true | undefined>]: string };
-  toggles: TToggleDescriptor<Omit<TCcOptions[TGroupName], TCustomField>>;
-  choices: readonly TChoiceDescriptor<TCcOptions[TGroupName]>[];
-  enums: readonly TEnumDescriptor<TCcOptions[TGroupName]>[];
-  strings: readonly TValueDescriptor<TFieldsOfType<TCcOptions[TGroupName], string | undefined>>[];
-  numbers: readonly TValueDescriptor<TFieldsOfType<TCcOptions[TGroupName], number | undefined>>[];
-  lists: readonly TValueDescriptor<TFieldsOfType<TCcOptions[TGroupName], readonly string[]>>[];
-  valuedToggles: readonly TValuedToggleDescriptor<TCcOptions[TGroupName]>[];
+  flags: { readonly [field in TFieldsOfType<Omit<TGroupFields<TGroupName>, TCustomField>, true | undefined>]: string };
+  toggles: TToggleDescriptor<Omit<TGroupFields<TGroupName>, TCustomField>>;
+  choices: readonly TChoiceDescriptor<TGroupFields<TGroupName>>[];
+  enums: readonly TEnumDescriptor<TGroupFields<TGroupName>>[];
+  strings: readonly TValueDescriptor<TFieldsOfType<TGroupFields<TGroupName>, string | undefined>>[];
+  numbers: readonly TValueDescriptor<TFieldsOfType<TGroupFields<TGroupName>, number | undefined>>[];
+  lists: readonly TValueDescriptor<TFieldsOfType<TGroupFields<TGroupName>, readonly string[] | undefined>>[];
+  valuedToggles: readonly TValuedToggleDescriptor<TGroupFields<TGroupName>>[];
 };
 
 // any group descriptor, as the parser and formatter handle them through field names

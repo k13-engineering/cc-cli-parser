@@ -233,7 +233,7 @@ describe("createCompilerCommandLineParser", () => {
       it(`should understand every option of the ${name} call`, () => {
         const options = parser.parseCommandLine({ args: line.split(" ") });
 
-        assert.deepEqual(options.unknownOptions, {});
+        assert.equal(options.unknownOptions, undefined);
         assert.deepEqual(parser.parseCommandLine({ args: parser.formatCommandLine({ options }) }), options);
       });
     });
