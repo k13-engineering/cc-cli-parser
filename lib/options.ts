@@ -68,7 +68,7 @@ const booleanFlagNames = [
   "nolibc",
   "rdynamic",
   "static",
-] as const satisfies readonly (keyof TCcOptions)[];
+] as const;
 
 type TCcBooleanFlagName = typeof booleanFlagNames[number];
 
