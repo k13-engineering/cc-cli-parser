@@ -22,7 +22,11 @@ describe("parse and format", () => {
 
   [
     "-ftls-model=local-exec -fvisibility=default",
-    "-rdynamic"
+    "-rdynamic",
+    "a.c -static",
+    "-fno-common",
+    "-g2",
+    "-E a.c -Iinclude -include config.h -DA -DB=1 -MM -MT a.o -MP"
   ].forEach((argsAsString) => {
     it(`should parse "${argsAsString}" correctly`, () => {
       const args = argsAsString.split(/\s+/);
