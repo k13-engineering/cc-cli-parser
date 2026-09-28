@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "main": "lib/index.js",
+  "main": "lib/index.ts",
   "scripts": {
     "build": "rm -rf dist/ && deno-node-build --root . --out dist/ --entry lib/index.ts",
     "type-check": "tsc --noEmit",

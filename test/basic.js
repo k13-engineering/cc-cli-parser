@@ -1,5 +1,5 @@
 import assert from "assert";
-import ccParser from "../lib/index.js";
+import * as ccParser from "../lib/index.ts";
 
 describe("parse and format", () => {
     [
